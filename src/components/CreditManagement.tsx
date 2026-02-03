@@ -5,7 +5,7 @@ import { Transaction, Contact } from '../types';
 interface CreditManagementProps {
   transactions: Transaction[];
   contacts: Contact[];
-  onAddContact: (name: string, phone?: string, email?: string, note?: string) => Contact;
+  onAddContact: (name: string, phone?: string, email?: string, note?: string) => Promise<Contact>;
   onUpdateContact: (id: string, updates: Partial<Contact>) => void;
   onDelete: (id: string) => void;
   currencySymbol?: string;
