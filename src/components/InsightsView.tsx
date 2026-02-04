@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { insightsApi, HealthScoreResponse } from '../services/api';
+import { insightsApi, HealthScoreResponse, SpendingComparisonsResponse } from '../services/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -62,6 +62,9 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [healthExpanded, setHealthExpanded] = useState(true);
+  const [comparisons, setComparisons] = useState<SpendingComparisonsResponse | null>(null);
+  const [loadingComparisons, setLoadingComparisons] = useState(false);
+  const [comparisonsExpanded, setComparisonsExpanded] = useState(false);
   
   // Use cached health score from parent
   const healthScore = cachedHealthScore;
@@ -128,11 +131,27 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     }
   };
 
+  const fetchComparisons = async () => {
+    setLoadingComparisons(true);
+    try {
+      const response = await insightsApi.getSpendingComparisons(currencySymbol);
+      setComparisons(response);
+    } catch (err) {
+      console.error('Failed to fetch comparisons:', err);
+    } finally {
+      setLoadingComparisons(false);
+    }
+  };
+
   useEffect(() => {
     fetchWeeklySummary();
     // Only fetch health score if not already cached
     if (!cachedHealthScore) {
       fetchHealthScore();
+    }
+    // Fetch comparisons
+    if (!comparisons) {
+      fetchComparisons();
     }
   }, []);
 
@@ -248,6 +267,69 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Anonymous Comparisons Card - Collapsible */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+        <button
+          onClick={() => setComparisonsExpanded(!comparisonsExpanded)}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+              <i className="fas fa-users text-white text-sm"></i>
+            </div>
+            <div className="text-left">
+              <h3 className="text-base font-black text-slate-900">How You Compare</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                {loadingComparisons ? 'Analyzing...' : comparisons ? comparisons.summary : 'Anonymous benchmarks'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); fetchComparisons(); }}
+              disabled={loadingComparisons}
+              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
+            >
+              <i className={`fas fa-sync-alt text-xs text-slate-500 ${loadingComparisons ? 'animate-spin' : ''}`}></i>
+            </button>
+            <i className={`fas fa-chevron-down text-sm text-slate-400 transition-transform duration-300 ${comparisonsExpanded ? 'rotate-180' : ''}`}></i>
+          </div>
+        </button>
+
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${comparisonsExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          {loadingComparisons ? (
+            <div className="px-4 pb-4">
+              <div className="flex items-center gap-3 py-6">
+                <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm font-bold text-slate-400">Comparing your spending...</span>
+              </div>
+            </div>
+          ) : comparisons && comparisons.comparisons.length > 0 ? (
+            <div className="px-4 pb-4 space-y-3">
+              {comparisons.comparisons.map((item, i) => (
+                <div key={i} className={`p-3 rounded-xl border ${item.is_better ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-black text-slate-700">{item.category}</span>
+                    <div className={`px-2 py-0.5 rounded-full text-[8px] font-black ${item.is_better ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
+                      {item.is_better ? '✓ Better' : 'Room to improve'}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-500">You: <span className="font-bold text-slate-700">{item.your_value}</span></span>
+                    <span className="text-slate-500">Avg: <span className="font-bold text-slate-700">{item.benchmark}</span></span>
+                  </div>
+                  <p className="text-[9px] text-slate-500 mt-1 italic">{item.insight}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 pb-4">
+              <p className="text-sm text-slate-400 text-center py-4">Add more transactions to see comparisons</p>
             </div>
           )}
         </div>

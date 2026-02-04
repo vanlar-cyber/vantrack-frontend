@@ -407,6 +407,24 @@ export interface HealthScoreResponse {
   tips: string;
 }
 
+export interface ComparisonItem {
+  category: string;
+  your_value: string;
+  your_pct?: string;
+  benchmark: string;
+  difference: number;
+  is_better: boolean;
+  insight: string;
+}
+
+export interface SpendingComparisonsResponse {
+  monthly_income: number;
+  monthly_expenses: number;
+  comparisons: ComparisonItem[];
+  percentile: number;
+  summary: string;
+}
+
 export const insightsApi = {
   getWeeklySummary: (currencySymbol: string = '$', languageCode: string = 'en') =>
     request<WeeklySummaryResponse>(`/insights/weekly-summary?currency_symbol=${encodeURIComponent(currencySymbol)}&language_code=${languageCode}`),
@@ -419,6 +437,9 @@ export const insightsApi = {
   
   getHealthScore: (currencySymbol: string = '$', languageCode: string = 'en') =>
     request<HealthScoreResponse>(`/insights/health-score?currency_symbol=${encodeURIComponent(currencySymbol)}&language_code=${languageCode}`),
+  
+  getSpendingComparisons: (currencySymbol: string = '$') =>
+    request<SpendingComparisonsResponse>(`/insights/spending-comparisons?currency_symbol=${encodeURIComponent(currencySymbol)}`),
 };
 
 export { ApiError };
