@@ -1,6 +1,7 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Message, Transaction, DraftTransaction, TransactionType, Contact, Attachment, AttachmentType } from '../types';
+import { useWakeWord } from '../hooks/useWakeWord';
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -35,6 +36,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [wakeWordEnabled, setWakeWordEnabled] = useState(true);
+  const [showWakeWordActivated, setShowWakeWordActivated] = useState(false);
   const [isContextExpanded, setIsContextExpanded] = useState(true);
   const [isPendingExpanded, setIsPendingExpanded] = useState(true);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -124,6 +127,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     mediaRecorderRef.current = null;
     setIsRecording(false);
   };
+
+  // Wake word detection - "Hey Van" activates voice input
+  const handleWakeWordDetected = useCallback(() => {
+    setShowWakeWordActivated(true);
+    // Play a subtle sound or vibration feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(100);
+    }
+    // Start recording after a brief delay
+    setTimeout(() => {
+      if (!isRecording) {
+        startRecording();
+      }
+      setShowWakeWordActivated(false);
+    }, 500);
+  }, [isRecording]);
+
+  const { isListening: isWakeWordListening, isSupported: isWakeWordSupported } = useWakeWord({
+    wakeWord: 'hey van',
+    onWakeWordDetected: handleWakeWordDetected,
+    enabled: wakeWordEnabled && !isRecording && !isProcessing,
+  });
 
   const openCamera = async () => {
     if (isCameraOpen) return;
@@ -747,6 +772,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             >
               <i className={`fas ${isRecording ? 'fa-stop' : 'fa-microphone'}`}></i>
             </button>
+            {/* Wake Word Toggle */}
+            {isWakeWordSupported && (
+              <button
+                type="button"
+                onClick={() => setWakeWordEnabled(!wakeWordEnabled)}
+                className={`w-10 h-10 rounded-2xl border flex items-center justify-center shadow-md transition-all relative ${
+                  wakeWordEnabled
+                    ? 'bg-gradient-to-br from-violet-50 to-violet-100 text-violet-700 border-violet-200 shadow-violet-100'
+                    : 'bg-slate-100 text-slate-400 border-slate-200'
+                }`}
+                title={wakeWordEnabled ? 'Say "Hey Van" to activate voice' : 'Wake word disabled'}
+              >
+                <i className="fas fa-assistive-listening-systems text-sm"></i>
+                {wakeWordEnabled && isWakeWordListening && (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
+              </button>
+            )}
           </div>
 
           <div className="relative">
@@ -799,6 +842,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wake Word Activated Overlay */}
+      {showWakeWordActivated && (
+        <div className="fixed inset-0 z-[300] bg-violet-600/90 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
+          <div className="text-center text-white">
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-white/20 flex items-center justify-center animate-pulse">
+              <i className="fas fa-microphone text-4xl"></i>
+            </div>
+            <h2 className="text-2xl font-black mb-2">Hey Van!</h2>
+            <p className="text-white/70 text-sm font-bold">Listening...</p>
           </div>
         </div>
       )}
