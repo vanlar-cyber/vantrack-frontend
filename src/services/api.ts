@@ -376,6 +376,37 @@ export interface QuestionResponse {
   answer: string;
 }
 
+export interface BreakdownItem {
+  score: number;
+  max: number;
+  value: string;
+  label: string;
+}
+
+export interface HealthBreakdown {
+  savings_rate: BreakdownItem;
+  debt_ratio: BreakdownItem;
+  consistency: BreakdownItem;
+  emergency_fund: BreakdownItem;
+}
+
+export interface HealthSummary {
+  monthly_income: number;
+  monthly_expense: number;
+  total_receivable: number;
+  total_payable: number;
+  net_position: number;
+}
+
+export interface HealthScoreResponse {
+  score: number;
+  grade: string;
+  grade_color: string;
+  breakdown: HealthBreakdown;
+  summary: HealthSummary;
+  tips: string;
+}
+
 export const insightsApi = {
   getWeeklySummary: (currencySymbol: string = '$', languageCode: string = 'en') =>
     request<WeeklySummaryResponse>(`/insights/weekly-summary?currency_symbol=${encodeURIComponent(currencySymbol)}&language_code=${languageCode}`),
@@ -385,6 +416,9 @@ export const insightsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  
+  getHealthScore: (currencySymbol: string = '$', languageCode: string = 'en') =>
+    request<HealthScoreResponse>(`/insights/health-score?currency_symbol=${encodeURIComponent(currencySymbol)}&language_code=${languageCode}`),
 };
 
 export { ApiError };

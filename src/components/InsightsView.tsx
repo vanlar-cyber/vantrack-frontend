@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { insightsApi } from '../services/api';
+import { insightsApi, HealthScoreResponse } from '../services/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -58,6 +58,9 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
   const [summary, setSummary] = useState<string>('');
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const [healthScore, setHealthScore] = useState<HealthScoreResponse | null>(null);
+  const [loadingHealth, setLoadingHealth] = useState(false);
+  const [healthExpanded, setHealthExpanded] = useState(true);
   const [question, setQuestion] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [loadingAnswer, setLoadingAnswer] = useState(false);
@@ -108,8 +111,21 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     setError('');
   };
 
+  const fetchHealthScore = async () => {
+    setLoadingHealth(true);
+    try {
+      const response = await insightsApi.getHealthScore(currencySymbol, languageCode);
+      setHealthScore(response);
+    } catch (err) {
+      console.error('Failed to fetch health score:', err);
+    } finally {
+      setLoadingHealth(false);
+    }
+  };
+
   useEffect(() => {
     fetchWeeklySummary();
+    fetchHealthScore();
   }, [currencySymbol, languageCode]);
 
   useEffect(() => {
@@ -123,8 +139,112 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     "Compare this vs last month",
   ];
 
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-emerald-500';
+    if (score >= 60) return 'text-blue-500';
+    if (score >= 40) return 'text-amber-500';
+    return 'text-rose-500';
+  };
+
+  const getScoreGradient = (score: number) => {
+    if (score >= 80) return 'from-emerald-500 to-teal-600';
+    if (score >= 60) return 'from-blue-500 to-indigo-600';
+    if (score >= 40) return 'from-amber-500 to-orange-600';
+    return 'from-rose-500 to-red-600';
+  };
+
+  const getBarColor = (score: number, max: number) => {
+    const pct = (score / max) * 100;
+    if (pct >= 70) return 'bg-emerald-500';
+    if (pct >= 50) return 'bg-blue-500';
+    if (pct >= 30) return 'bg-amber-500';
+    return 'bg-rose-500';
+  };
+
   return (
     <div className="space-y-4">
+      {/* Financial Health Score Card */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+        <button
+          onClick={() => setHealthExpanded(!healthExpanded)}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            {loadingHealth ? (
+              <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : healthScore ? (
+              <div className={`w-12 h-12 bg-gradient-to-br ${getScoreGradient(healthScore.score)} rounded-xl flex items-center justify-center`}>
+                <span className="text-white font-black text-lg">{healthScore.score}</span>
+              </div>
+            ) : (
+              <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                <i className="fas fa-heart-pulse text-slate-400"></i>
+              </div>
+            )}
+            <div className="text-left">
+              <h3 className="text-base font-black text-slate-900">Financial Health</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                {loadingHealth ? 'Calculating...' : healthScore ? healthScore.grade : 'Tap to view'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); fetchHealthScore(); }}
+              disabled={loadingHealth}
+              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
+            >
+              <i className={`fas fa-sync-alt text-xs text-slate-500 ${loadingHealth ? 'animate-spin' : ''}`}></i>
+            </button>
+            <i className={`fas fa-chevron-down text-sm text-slate-400 transition-transform duration-300 ${healthExpanded ? 'rotate-180' : ''}`}></i>
+          </div>
+        </button>
+
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${healthExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          {healthScore && (
+            <div className="px-4 pb-4 space-y-4">
+              {/* Score Breakdown */}
+              <div className="space-y-3">
+                {Object.entries(healthScore.breakdown).map(([key, item]) => (
+                  <div key={key}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[11px] font-bold text-slate-600">{item.label}</span>
+                      <span className="text-[10px] font-bold text-slate-400">{item.value}</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${getBarColor(item.score, item.max)} rounded-full transition-all duration-500`}
+                        style={{ width: `${(item.score / item.max) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-end mt-0.5">
+                      <span className="text-[9px] text-slate-400">{item.score}/{item.max}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* AI Tips */}
+              {healthScore.tips && (
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 bg-indigo-500 rounded-md flex items-center justify-center">
+                      <i className="fas fa-lightbulb text-white text-[8px]"></i>
+                    </div>
+                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">How to Improve</span>
+                  </div>
+                  <div className="text-[11px] leading-relaxed text-slate-600">
+                    {renderMarkdown(healthScore.tips)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Weekly Summary Card - Collapsible */}
       <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-xl overflow-hidden">
         <button
