@@ -58,7 +58,7 @@ export const useWakeWord = ({
   const [isSupported, setIsSupported] = useState(false);
   const [lastHeard, setLastHeard] = useState<string>('');
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isActiveRef = useRef(false);
 
   const normalizeText = (text: string): string => {
