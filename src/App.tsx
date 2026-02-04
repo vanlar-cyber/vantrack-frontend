@@ -632,31 +632,35 @@ const MainApp: React.FC = () => {
         )}
       </main>
 
-      <nav className="absolute bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center px-4 z-50">
+      <nav className="absolute bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center px-2 z-50">
         <button onClick={() => setActiveView('home')} className={`flex flex-col items-center gap-1 ${activeView === 'home' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-th-large text-lg"></i>
-          <span className="text-[7px] font-black uppercase tracking-tighter">Home</span>
+          <i className="fas fa-th-large text-base"></i>
+          <span className="text-[6px] font-black uppercase tracking-tighter">Home</span>
         </button>
         <button onClick={() => setActiveView('portfolio')} className={`flex flex-col items-center gap-1 ${activeView === 'portfolio' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-address-book text-lg"></i>
-          <span className="text-[7px] font-black uppercase tracking-tighter">Contacts</span>
+          <i className="fas fa-address-book text-base"></i>
+          <span className="text-[6px] font-black uppercase tracking-tighter">Contacts</span>
         </button>
         <button onClick={() => setActiveView('assistant')} className="relative">
-          <div className={`w-12 h-12 rounded-[2rem] flex items-center justify-center shadow-xl transition-all ${
+          <div className={`w-11 h-11 rounded-[1.5rem] flex items-center justify-center shadow-xl transition-all ${
             activeView === 'assistant'
               ? 'bg-indigo-600 text-white shadow-indigo-200 shadow-indigo-500/40 scale-100 translate-y-0'
-              : 'bg-white text-indigo-600 border border-indigo-100 -translate-y-8 scale-110 shadow-2xl shadow-indigo-200/60 ring-4 ring-indigo-500/10 animate-pulse'
+              : 'bg-white text-indigo-600 border border-indigo-100 -translate-y-6 scale-110 shadow-2xl shadow-indigo-200/60 ring-4 ring-indigo-500/10 animate-pulse'
           }`}>
-            <i className="fas fa-plus text-lg"></i>
+            <i className="fas fa-plus text-base"></i>
           </div>
         </button>
         <button onClick={() => setActiveView('ledger')} className={`flex flex-col items-center gap-1 ${activeView === 'ledger' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-file-invoice-dollar text-lg"></i>
-          <span className="text-[7px] font-black uppercase tracking-tighter">Ledger</span>
+          <i className="fas fa-file-invoice-dollar text-base"></i>
+          <span className="text-[6px] font-black uppercase tracking-tighter">Ledger</span>
         </button>
         <button onClick={() => setActiveView('insights')} className={`flex flex-col items-center gap-1 ${activeView === 'insights' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-brain text-lg"></i>
-          <span className="text-[7px] font-black uppercase tracking-tighter">Insights</span>
+          <i className="fas fa-brain text-base"></i>
+          <span className="text-[6px] font-black uppercase tracking-tighter">Insights</span>
+        </button>
+        <button onClick={() => setActiveView('history')} className={`flex flex-col items-center gap-1 ${activeView === 'history' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className="fas fa-layer-group text-base"></i>
+          <span className="text-[6px] font-black uppercase tracking-tighter">Vault</span>
         </button>
       </nav>
     </div>
