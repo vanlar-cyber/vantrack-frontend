@@ -425,6 +425,51 @@ export interface SpendingComparisonsResponse {
   summary: string;
 }
 
+export interface CashFlowForecast {
+  current_balance: number;
+  projected_end_of_month: number;
+  projected_income: number;
+  projected_expenses: number;
+  days_remaining: number;
+  trend: string;
+  message: string;
+}
+
+export interface BillReminder {
+  name: string;
+  amount: number;
+  usual_day: number;
+  days_until_due: number;
+  is_upcoming: boolean;
+  message: string;
+}
+
+export interface DebtItem {
+  id: string;
+  description: string;
+  contact: string;
+  original_amount: number;
+  remaining: number;
+  due_date?: string;
+}
+
+export interface DebtPayoff {
+  total_debt: number;
+  debt_count: number;
+  debts: DebtItem[];
+  avg_monthly_payment: number;
+  months_to_payoff?: number;
+  payoff_date?: string;
+  message?: string;
+}
+
+export interface SmartPredictionsResponse {
+  cash_flow_forecast: CashFlowForecast;
+  bill_reminders: BillReminder[];
+  debt_payoff: DebtPayoff;
+  generated_at: string;
+}
+
 export const insightsApi = {
   getWeeklySummary: (currencySymbol: string = '$', languageCode: string = 'en') =>
     request<WeeklySummaryResponse>(`/insights/weekly-summary?currency_symbol=${encodeURIComponent(currencySymbol)}&language_code=${languageCode}`),
@@ -440,6 +485,9 @@ export const insightsApi = {
   
   getSpendingComparisons: (currencySymbol: string = '$') =>
     request<SpendingComparisonsResponse>(`/insights/spending-comparisons?currency_symbol=${encodeURIComponent(currencySymbol)}`),
+  
+  getSmartPredictions: (currencySymbol: string = '$') =>
+    request<SmartPredictionsResponse>(`/insights/smart-predictions?currency_symbol=${encodeURIComponent(currencySymbol)}`),
 };
 
 export { ApiError };

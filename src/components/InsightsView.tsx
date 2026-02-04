@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { insightsApi, HealthScoreResponse, SpendingComparisonsResponse } from '../services/api';
+import { insightsApi, HealthScoreResponse, SpendingComparisonsResponse, SmartPredictionsResponse } from '../services/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -65,6 +65,9 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
   const [comparisons, setComparisons] = useState<SpendingComparisonsResponse | null>(null);
   const [loadingComparisons, setLoadingComparisons] = useState(false);
   const [comparisonsExpanded, setComparisonsExpanded] = useState(false);
+  const [predictions, setPredictions] = useState<SmartPredictionsResponse | null>(null);
+  const [loadingPredictions, setLoadingPredictions] = useState(false);
+  const [predictionsExpanded, setPredictionsExpanded] = useState(true);
   
   // Use cached health score from parent
   const healthScore = cachedHealthScore;
@@ -143,6 +146,18 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     }
   };
 
+  const fetchPredictions = async () => {
+    setLoadingPredictions(true);
+    try {
+      const response = await insightsApi.getSmartPredictions(currencySymbol);
+      setPredictions(response);
+    } catch (err) {
+      console.error('Failed to fetch predictions:', err);
+    } finally {
+      setLoadingPredictions(false);
+    }
+  };
+
   useEffect(() => {
     fetchWeeklySummary();
     // Only fetch health score if not already cached
@@ -152,6 +167,10 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     // Fetch comparisons
     if (!comparisons) {
       fetchComparisons();
+    }
+    // Fetch predictions
+    if (!predictions) {
+      fetchPredictions();
     }
   }, []);
 
@@ -330,6 +349,148 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
           ) : (
             <div className="px-4 pb-4">
               <p className="text-sm text-slate-400 text-center py-4">Add more transactions to see comparisons</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Smart Predictions Card - Collapsible */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+        <button
+          onClick={() => setPredictionsExpanded(!predictionsExpanded)}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
+              <i className="fas fa-crystal-ball text-white text-sm"></i>
+            </div>
+            <div className="text-left">
+              <h3 className="text-base font-black text-slate-900">Smart Predictions</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                {loadingPredictions ? 'Calculating...' : 'Forecasts & reminders'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); fetchPredictions(); }}
+              disabled={loadingPredictions}
+              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
+            >
+              <i className={`fas fa-sync-alt text-xs text-slate-500 ${loadingPredictions ? 'animate-spin' : ''}`}></i>
+            </button>
+            <i className={`fas fa-chevron-down text-sm text-slate-400 transition-transform duration-300 ${predictionsExpanded ? 'rotate-180' : ''}`}></i>
+          </div>
+        </button>
+
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${predictionsExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          {loadingPredictions ? (
+            <div className="px-4 pb-4">
+              <div className="flex items-center gap-3 py-6">
+                <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm font-bold text-slate-400">Analyzing patterns...</span>
+              </div>
+            </div>
+          ) : predictions ? (
+            <div className="px-4 pb-4 space-y-4">
+              {/* Cash Flow Forecast */}
+              <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-4 border border-cyan-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 bg-cyan-500 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-chart-line text-white text-[10px]"></i>
+                  </div>
+                  <span className="text-[10px] font-black text-cyan-700 uppercase tracking-widest">Cash Flow Forecast</span>
+                </div>
+                <p className="text-sm font-bold text-slate-700 mb-3">{predictions.cash_flow_forecast.message}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/60 rounded-lg p-2">
+                    <p className="text-[9px] text-slate-500 uppercase font-bold">Current</p>
+                    <p className={`text-lg font-black ${predictions.cash_flow_forecast.current_balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {currencySymbol}{Math.abs(predictions.cash_flow_forecast.current_balance).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="bg-white/60 rounded-lg p-2">
+                    <p className="text-[9px] text-slate-500 uppercase font-bold">End of Month</p>
+                    <p className={`text-lg font-black ${predictions.cash_flow_forecast.projected_end_of_month >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {currencySymbol}{Math.abs(predictions.cash_flow_forecast.projected_end_of_month).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[9px] text-slate-500 mt-2 text-center">
+                  {predictions.cash_flow_forecast.days_remaining} days remaining this month
+                </p>
+              </div>
+
+              {/* Bill Reminders */}
+              {predictions.bill_reminders.length > 0 && (
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 bg-amber-500 rounded-lg flex items-center justify-center">
+                      <i className="fas fa-bell text-white text-[10px]"></i>
+                    </div>
+                    <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Bill Reminders</span>
+                  </div>
+                  <div className="space-y-2">
+                    {predictions.bill_reminders.map((bill, i) => (
+                      <div 
+                        key={i} 
+                        className={`flex items-center justify-between p-2 rounded-lg ${bill.is_upcoming ? 'bg-amber-100 border border-amber-200' : 'bg-white/60'}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {bill.is_upcoming && (
+                            <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+                          )}
+                          <div>
+                            <p className="text-[11px] font-bold text-slate-700">{bill.name}</p>
+                            <p className="text-[9px] text-slate-500">Due around the {bill.usual_day}{bill.usual_day === 1 ? 'st' : bill.usual_day === 2 ? 'nd' : bill.usual_day === 3 ? 'rd' : 'th'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[11px] font-black text-slate-700">{currencySymbol}{bill.amount.toLocaleString()}</p>
+                          <p className={`text-[9px] font-bold ${bill.is_upcoming ? 'text-amber-600' : 'text-slate-400'}`}>
+                            {bill.days_until_due === 0 ? 'Today!' : bill.days_until_due === 1 ? 'Tomorrow' : `In ${bill.days_until_due} days`}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Debt Payoff Timeline */}
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-4 border border-violet-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 bg-violet-500 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-calendar-check text-white text-[10px]"></i>
+                  </div>
+                  <span className="text-[10px] font-black text-violet-700 uppercase tracking-widest">Debt Payoff Timeline</span>
+                </div>
+                <p className="text-sm font-bold text-slate-700 mb-3">{predictions.debt_payoff.message}</p>
+                {predictions.debt_payoff.total_debt > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                      <span className="text-[10px] text-slate-500 font-bold">Total Debt</span>
+                      <span className="text-sm font-black text-rose-600">{currencySymbol}{predictions.debt_payoff.total_debt.toLocaleString()}</span>
+                    </div>
+                    {predictions.debt_payoff.months_to_payoff && (
+                      <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                        <span className="text-[10px] text-slate-500 font-bold">Months to Freedom</span>
+                        <span className="text-sm font-black text-violet-600">{predictions.debt_payoff.months_to_payoff} months</span>
+                      </div>
+                    )}
+                    {predictions.debt_payoff.payoff_date && (
+                      <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                        <span className="text-[10px] text-slate-500 font-bold">Debt-Free By</span>
+                        <span className="text-sm font-black text-emerald-600">{predictions.debt_payoff.payoff_date}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="px-4 pb-4">
+              <p className="text-sm text-slate-400 text-center py-4">Add more transactions to see predictions</p>
             </div>
           )}
         </div>
