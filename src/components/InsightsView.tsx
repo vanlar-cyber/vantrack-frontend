@@ -6,6 +6,49 @@ interface ChatMessage {
   content: string;
 }
 
+const renderMarkdown = (text: string): React.ReactNode => {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    let content: React.ReactNode = line;
+    
+    // Bold: **text** or __text__
+    content = line.split(/(\*\*[^*]+\*\*|__[^_]+__)/g).map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
+      }
+      if (part.startsWith('__') && part.endsWith('__')) {
+        return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+    
+    // Bullet points
+    if (line.trim().startsWith('- ') || line.trim().startsWith('• ')) {
+      return (
+        <div key={i} className="flex gap-2 ml-2">
+          <span>•</span>
+          <span>{content}</span>
+        </div>
+      );
+    }
+    
+    // Headers
+    if (line.trim().startsWith('### ')) {
+      return <div key={i} className="font-bold mt-2 mb-1">{line.replace('### ', '')}</div>;
+    }
+    if (line.trim().startsWith('## ')) {
+      return <div key={i} className="font-bold text-lg mt-3 mb-1">{line.replace('## ', '')}</div>;
+    }
+    
+    // Empty lines
+    if (line.trim() === '') {
+      return <div key={i} className="h-2" />;
+    }
+    
+    return <div key={i}>{content}</div>;
+  });
+};
+
 interface InsightsViewProps {
   currencySymbol: string;
   languageCode: string;
@@ -121,8 +164,8 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
             ) : error && !summary ? (
               <div className="py-4 text-white/80 text-sm">{error}</div>
             ) : (
-              <div className="text-[12px] leading-relaxed whitespace-pre-wrap font-medium text-white/90 max-h-[400px] overflow-y-auto">
-                {summary}
+              <div className="text-[12px] leading-relaxed font-medium text-white/90 max-h-[400px] overflow-y-auto">
+                {renderMarkdown(summary)}
               </div>
             )}
           </div>
@@ -179,8 +222,8 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
                         <div className="w-6 h-6 bg-indigo-600 rounded-lg flex items-center justify-center shrink-0 mt-1">
                           <i className="fas fa-robot text-white text-[10px]"></i>
                         </div>
-                        <div className="bg-slate-100 rounded-2xl rounded-tl-md px-3 py-2">
-                          <p className="text-[12px] leading-relaxed text-slate-700 whitespace-pre-wrap">{msg.content}</p>
+                        <div className="bg-slate-100 rounded-2xl rounded-tl-md px-3 py-2 text-[12px] leading-relaxed text-slate-700">
+                          {renderMarkdown(msg.content)}
                         </div>
                       </div>
                     )}
