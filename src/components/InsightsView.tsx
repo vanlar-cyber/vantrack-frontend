@@ -61,6 +61,7 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
   const [healthScore, setHealthScore] = useState<HealthScoreResponse | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [healthExpanded, setHealthExpanded] = useState(true);
+  const [askAiExpanded, setAskAiExpanded] = useState(false);
   const [question, setQuestion] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [loadingAnswer, setLoadingAnswer] = useState(false);
@@ -292,28 +293,41 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
         </div>
       </div>
 
-      {/* Ask AI Section - Chat Style */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 flex flex-col" style={{ height: 'calc(100vh - 340px)', minHeight: '300px' }}>
-        {/* Header */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-black text-slate-900">Ask AI</h3>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-              Chat about your finances
-            </p>
+      {/* Ask AI Section - Collapsible Chat Style */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+        {/* Collapsible Header */}
+        <button
+          onClick={() => setAskAiExpanded(!askAiExpanded)}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+              <i className="fas fa-robot text-indigo-500 text-sm"></i>
+            </div>
+            <div className="text-left">
+              <h3 className="text-base font-black text-slate-900">Ask AI</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                {chatHistory.length > 0 ? `${chatHistory.length} messages` : 'Chat about your finances'}
+              </p>
+            </div>
           </div>
-          {chatHistory.length > 0 && (
-            <button
-              onClick={clearChat}
-              className="px-3 py-1.5 text-[9px] font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-            >
-              Clear Chat
-            </button>
-          )}
-        </div>
+          <div className="flex items-center gap-2">
+            {chatHistory.length > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); clearChat(); }}
+                className="px-2 py-1 text-[9px] font-bold text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+              >
+                Clear
+              </button>
+            )}
+            <i className={`fas fa-chevron-down text-sm text-slate-400 transition-transform duration-300 ${askAiExpanded ? 'rotate-180' : ''}`}></i>
+          </div>
+        </button>
 
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {/* Expandable Content */}
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${askAiExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          {/* Chat Messages */}
+          <div className="h-[280px] overflow-y-auto p-4 space-y-3 border-t border-slate-100">
           {chatHistory.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center">
               <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center mb-3">
@@ -403,6 +417,7 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
