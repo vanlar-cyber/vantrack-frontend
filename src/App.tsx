@@ -610,6 +610,37 @@ const MainApp: React.FC = () => {
               onAddContact={addContact}
               onUpdateContact={updateContact}
               onDelete={deleteTransaction}
+              onCreateSplitExpense={async (data) => {
+                // Create credit_receivable transactions for each person who owes
+                for (const split of data.splits) {
+                  if (data.paidBy === 'me' && !split.paid) {
+                    // I paid, they owe me
+                    await transactionsApi.create({
+                      amount: split.amount,
+                      description: `${data.description} (split)`,
+                      category: 'Split Expense',
+                      type: 'credit_receivable',
+                      account: 'cash',
+                      contact_name: split.contactName,
+                      contact_id: split.contactId,
+                    });
+                  } else if (data.paidBy === split.contactId) {
+                    // They paid, I owe them my share
+                    await transactionsApi.create({
+                      amount: data.totalAmount / (data.splits.length + 1), // My share
+                      description: `${data.description} (split - my share)`,
+                      category: 'Split Expense',
+                      type: 'credit_payable',
+                      account: 'cash',
+                      contact_name: split.contactName,
+                      contact_id: split.contactId,
+                    });
+                  }
+                }
+                // Refresh data and invalidate health score cache
+                await fetchData();
+                setCachedHealthScore(null);
+              }}
               currencySymbol={currency.symbol} 
             />
           </div>

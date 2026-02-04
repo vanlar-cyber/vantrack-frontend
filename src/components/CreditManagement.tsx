@@ -1,6 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Transaction, Contact } from '../types';
+import SplitExpense from './SplitExpense';
+
+interface SplitData {
+  description: string;
+  totalAmount: number;
+  splits: { contactId: string; contactName: string; amount: number; paid: boolean }[];
+  paidBy: 'me' | string;
+}
 
 interface CreditManagementProps {
   transactions: Transaction[];
@@ -8,6 +16,7 @@ interface CreditManagementProps {
   onAddContact: (name: string, phone?: string, email?: string, note?: string) => Promise<Contact>;
   onUpdateContact: (id: string, updates: Partial<Contact>) => void;
   onDelete: (id: string) => void;
+  onCreateSplitExpense?: (data: SplitData) => void;
   currencySymbol?: string;
 }
 
@@ -17,9 +26,11 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
   onAddContact, 
   onUpdateContact,
   onDelete,
+  onCreateSplitExpense,
   currencySymbol = '$'
 }) => {
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showSplitExpense, setShowSplitExpense] = useState(false);
   const [newContact, setNewContact] = useState({ name: '', phone: '', email: '', note: '' });
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -197,6 +208,39 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Send Reminder Button - Only show if they owe you */}
+          {netPosition > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const message = `Hi ${contact.name}! 👋 Just a friendly reminder about the ${currencySymbol}${netPosition.toLocaleString()} you owe me. Let me know when you can settle up. Thanks! 🙏`;
+                  const whatsappUrl = contact.phone 
+                    ? `https://wa.me/${contact.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+                    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+                  window.open(whatsappUrl, '_blank');
+                }}
+                className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-100"
+              >
+                <i className="fab fa-whatsapp text-lg"></i>
+                <span className="text-[10px] font-black uppercase tracking-wider">Remind via WhatsApp</span>
+              </button>
+              <button
+                onClick={() => {
+                  const message = `Hi ${contact.name}! Just a friendly reminder about the ${currencySymbol}${netPosition.toLocaleString()} you owe me. Let me know when you can settle up. Thanks!`;
+                  if (contact.phone) {
+                    window.open(`sms:${contact.phone}?body=${encodeURIComponent(message)}`, '_blank');
+                  } else {
+                    navigator.clipboard.writeText(message);
+                    alert('Message copied to clipboard!');
+                  }
+                }}
+                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl flex items-center justify-center transition-all"
+              >
+                <i className="fas fa-comment-sms text-lg"></i>
+              </button>
+            </div>
+          )}
         </div>
 
         <section>
@@ -235,6 +279,15 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
 
   return (
     <div className="space-y-6 pb-24">
+      {/* Split Expense Button */}
+      <button
+        onClick={() => setShowSplitExpense(true)}
+        className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-indigo-100 hover:shadow-xl transition-all"
+      >
+        <i className="fas fa-receipt text-lg"></i>
+        <span className="text-sm font-black">Split an Expense</span>
+      </button>
+
       <section>
         <div className="flex justify-between items-center px-1 mb-4">
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contacts</h3>
@@ -325,6 +378,21 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
           )}
         </div>
       </section>
+
+      {/* Split Expense Modal */}
+      {showSplitExpense && (
+        <SplitExpense
+          contacts={contacts}
+          currencySymbol={currencySymbol}
+          onCreateSplit={(data) => {
+            if (onCreateSplitExpense) {
+              onCreateSplitExpense(data);
+            }
+            setShowSplitExpense(false);
+          }}
+          onClose={() => setShowSplitExpense(false)}
+        />
+      )}
     </div>
   );
 };
