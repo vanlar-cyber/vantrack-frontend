@@ -470,6 +470,63 @@ export interface SmartPredictionsResponse {
   generated_at: string;
 }
 
+export interface NudgeDetails {
+  weekly_income?: number;
+  weekly_expenses?: number;
+  weekly_balance?: number;
+  days_left?: number;
+}
+
+export interface Nudge {
+  type: string;
+  icon: string;
+  color: string;
+  title: string;
+  message: string;
+  priority?: string;
+  details?: NudgeDetails;
+}
+
+export interface NudgeSummary {
+  weekly_balance: number;
+  monthly_income: number;
+  monthly_expenses: number;
+  days_left_week: number;
+  days_left_month: number;
+}
+
+export interface ProactiveNudgesResponse {
+  nudges: Nudge[];
+  summary: NudgeSummary;
+  generated_at: string;
+}
+
+export interface BudgetCreate {
+  name: string;
+  type: string;
+  category?: string;
+  amount: number;
+  period?: string;
+  alert_at_percent?: number;
+}
+
+export interface BudgetResponse {
+  id: string;
+  name: string;
+  type: string;
+  category?: string;
+  amount: number;
+  period: string;
+  current_amount: number;
+  progress_percent: number;
+  alert_at_percent: number;
+  is_active: boolean;
+  is_over_budget: boolean;
+  status: string;
+  period_start?: string;
+  created_at: string;
+}
+
 export const insightsApi = {
   getWeeklySummary: (currencySymbol: string = '$', languageCode: string = 'en') =>
     request<WeeklySummaryResponse>(`/insights/weekly-summary?currency_symbol=${encodeURIComponent(currencySymbol)}&language_code=${languageCode}`),
@@ -488,6 +545,28 @@ export const insightsApi = {
   
   getSmartPredictions: (currencySymbol: string = '$') =>
     request<SmartPredictionsResponse>(`/insights/smart-predictions?currency_symbol=${encodeURIComponent(currencySymbol)}`),
+  
+  getNudges: (currencySymbol: string = '$') =>
+    request<ProactiveNudgesResponse>(`/insights/nudges?currency_symbol=${encodeURIComponent(currencySymbol)}`),
+};
+
+export const budgetsApi = {
+  getAll: () => request<BudgetResponse[]>('/budgets'),
+  
+  create: (data: BudgetCreate) =>
+    request<BudgetResponse>('/budgets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  update: (id: string, data: Partial<BudgetCreate> & { is_active?: boolean }) =>
+    request<BudgetResponse>(`/budgets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  
+  delete: (id: string) =>
+    request<void>(`/budgets/${id}`, { method: 'DELETE' }),
 };
 
 export { ApiError };

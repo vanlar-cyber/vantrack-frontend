@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { insightsApi, HealthScoreResponse, SpendingComparisonsResponse, SmartPredictionsResponse } from '../services/api';
+import { insightsApi, HealthScoreResponse, SpendingComparisonsResponse, SmartPredictionsResponse, ProactiveNudgesResponse } from '../services/api';
+import BudgetsView from './BudgetsView';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -68,6 +69,9 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
   const [predictions, setPredictions] = useState<SmartPredictionsResponse | null>(null);
   const [loadingPredictions, setLoadingPredictions] = useState(false);
   const [predictionsExpanded, setPredictionsExpanded] = useState(false);
+  const [nudges, setNudges] = useState<ProactiveNudgesResponse | null>(null);
+  const [loadingNudges, setLoadingNudges] = useState(false);
+  const [budgetsExpanded, setBudgetsExpanded] = useState(false);
   
   // Use cached health score from parent
   const healthScore = cachedHealthScore;
@@ -158,6 +162,18 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     }
   };
 
+  const fetchNudges = async () => {
+    setLoadingNudges(true);
+    try {
+      const response = await insightsApi.getNudges(currencySymbol);
+      setNudges(response);
+    } catch (err) {
+      console.error('Failed to fetch nudges:', err);
+    } finally {
+      setLoadingNudges(false);
+    }
+  };
+
   useEffect(() => {
     fetchWeeklySummary();
     // Only fetch health score if not already cached
@@ -172,6 +188,8 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     if (!predictions) {
       fetchPredictions();
     }
+    // Fetch nudges
+    fetchNudges();
   }, []);
 
   useEffect(() => {
@@ -207,8 +225,85 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     return 'bg-rose-500';
   };
 
+  const getNudgeIcon = (icon: string) => {
+    const iconMap: Record<string, string> = {
+      'sun': 'fa-sun',
+      'bell': 'fa-bell',
+      'exclamation-triangle': 'fa-exclamation-triangle',
+      'chart-bar': 'fa-chart-bar',
+      'party-horn': 'fa-party-horn',
+      'check-circle': 'fa-check-circle',
+      'trophy': 'fa-trophy',
+      'piggy-bank': 'fa-piggy-bank',
+    };
+    return iconMap[icon] || 'fa-bell';
+  };
+
+  const getNudgeColor = (color: string) => {
+    const colorMap: Record<string, string> = {
+      'amber': 'bg-amber-100 text-amber-600',
+      'rose': 'bg-rose-100 text-rose-600',
+      'emerald': 'bg-emerald-100 text-emerald-600',
+      'orange': 'bg-orange-100 text-orange-600',
+    };
+    return colorMap[color] || 'bg-slate-100 text-slate-600';
+  };
+
   return (
     <div className="space-y-4">
+      {/* Proactive Nudges - Always visible at top */}
+      {nudges && nudges.nudges.length > 0 && (
+        <div className="space-y-2">
+          {nudges.nudges.slice(0, 3).map((nudge, i) => (
+            <div
+              key={i}
+              className={`rounded-xl p-3 border ${
+                nudge.type === 'celebration' ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-100' :
+                nudge.type === 'alert' ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100' :
+                'bg-gradient-to-r from-sky-50 to-blue-50 border-sky-100'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${getNudgeColor(nudge.color)}`}>
+                  <i className={`fas ${getNudgeIcon(nudge.icon)} text-sm`}></i>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-bold text-slate-800">{nudge.title}</h4>
+                  <p className="text-xs text-slate-600">{nudge.message}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Budgets & Goals Card - Collapsible */}
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+        <button
+          onClick={() => setBudgetsExpanded(!budgetsExpanded)}
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
+              <i className="fas fa-bullseye text-white text-sm"></i>
+            </div>
+            <div className="text-left">
+              <h3 className="text-base font-black text-slate-900">Budgets & Goals</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                Set limits and track progress
+              </p>
+            </div>
+          </div>
+          <i className={`fas fa-chevron-down text-sm text-slate-400 transition-transform duration-300 ${budgetsExpanded ? 'rotate-180' : ''}`}></i>
+        </button>
+
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${budgetsExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="px-4 pb-4">
+            <BudgetsView currencySymbol={currencySymbol} />
+          </div>
+        </div>
+      </div>
+
       {/* Financial Health Score Card */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
         <button
