@@ -61,13 +61,13 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const [loadingHealth, setLoadingHealth] = useState(false);
-  const [healthExpanded, setHealthExpanded] = useState(true);
+  const [healthExpanded, setHealthExpanded] = useState(false);
   const [comparisons, setComparisons] = useState<SpendingComparisonsResponse | null>(null);
   const [loadingComparisons, setLoadingComparisons] = useState(false);
   const [comparisonsExpanded, setComparisonsExpanded] = useState(false);
   const [predictions, setPredictions] = useState<SmartPredictionsResponse | null>(null);
   const [loadingPredictions, setLoadingPredictions] = useState(false);
-  const [predictionsExpanded, setPredictionsExpanded] = useState(true);
+  const [predictionsExpanded, setPredictionsExpanded] = useState(false);
   
   // Use cached health score from parent
   const healthScore = cachedHealthScore;
@@ -497,18 +497,18 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
       </div>
 
       {/* Weekly Summary Card - Collapsible */}
-      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white shadow-xl overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
         <button
           onClick={() => setSummaryExpanded(!summaryExpanded)}
-          className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-all"
+          className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-all"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              <i className="fas fa-chart-line text-sm"></i>
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <i className="fas fa-chart-line text-white text-sm"></i>
             </div>
             <div className="text-left">
-              <h3 className="text-base font-black">Weekly Insights</h3>
-              <p className="text-[9px] font-bold text-white/60 uppercase tracking-widest">
+              <h3 className="text-base font-black text-slate-900">Weekly Insights</h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                 {loadingSummary ? 'Analyzing...' : 'Tap to view AI summary'}
               </p>
             </div>
@@ -517,11 +517,11 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
             <button
               onClick={(e) => { e.stopPropagation(); fetchWeeklySummary(); }}
               disabled={loadingSummary}
-              className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
+              className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
             >
-              <i className={`fas fa-sync-alt text-xs ${loadingSummary ? 'animate-spin' : ''}`}></i>
+              <i className={`fas fa-sync-alt text-xs text-slate-500 ${loadingSummary ? 'animate-spin' : ''}`}></i>
             </button>
-            <i className={`fas fa-chevron-down text-sm transition-transform duration-300 ${summaryExpanded ? 'rotate-180' : ''}`}></i>
+            <i className={`fas fa-chevron-down text-sm text-slate-400 transition-transform duration-300 ${summaryExpanded ? 'rotate-180' : ''}`}></i>
           </div>
         </button>
         
@@ -529,13 +529,13 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
           <div className="px-4 pb-4">
             {loadingSummary ? (
               <div className="flex items-center gap-3 py-6">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-sm font-bold text-white/80">Analyzing your finances...</span>
+                <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm font-bold text-slate-400">Analyzing your finances...</span>
               </div>
             ) : error && !summary ? (
-              <div className="py-4 text-white/80 text-sm">{error}</div>
+              <div className="py-4 text-slate-500 text-sm">{error}</div>
             ) : (
-              <div className="text-[12px] leading-relaxed font-medium text-white/90 max-h-[400px] overflow-y-auto">
+              <div className="text-[12px] leading-relaxed font-medium text-slate-600 max-h-[400px] overflow-y-auto">
                 {renderMarkdown(summary)}
               </div>
             )}
