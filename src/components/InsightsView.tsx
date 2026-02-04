@@ -4,6 +4,7 @@ import {
   HealthScoreResponse,
   SmartPredictionsResponse,
   ProactiveNudgesResponse,
+  SpendingComparisonsResponse,
   budgetsApi,
   BudgetResponse,
 } from '../services/api';
@@ -50,10 +51,12 @@ function useInsightsData(args: {
   const [summary, setSummary] = useState('');
   const [predictions, setPredictions] = useState<SmartPredictionsResponse | null>(null);
   const [nudges, setNudges] = useState<ProactiveNudgesResponse | null>(null);
+  const [comparisons, setComparisons] = useState<SpendingComparisonsResponse | null>(null);
   const [budgets, setBudgets] = useState<BudgetResponse[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [loadingPredictions, setLoadingPredictions] = useState(false);
+  const [loadingComparisons, setLoadingComparisons] = useState(false);
 
   const fetchWeeklySummary = useCallback(async () => {
     setLoadingSummary(true);
@@ -109,19 +112,32 @@ function useInsightsData(args: {
     }
   }, []);
 
+  const fetchComparisons = useCallback(async () => {
+    setLoadingComparisons(true);
+    try {
+      const response = await insightsApi.getSpendingComparisons(currencySymbol);
+      setComparisons(response);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingComparisons(false);
+    }
+  }, [currencySymbol]);
+
   useEffect(() => {
     fetchWeeklySummary();
     if (!cachedHealthScore) fetchHealthScore();
     fetchPredictions();
     fetchNudges();
     fetchBudgets();
+    fetchComparisons();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
-    summary, predictions, nudges, budgets,
-    loadingSummary, loadingHealth, loadingPredictions,
-    fetchWeeklySummary, fetchHealthScore, fetchPredictions, fetchBudgets,
+    summary, predictions, nudges, budgets, comparisons,
+    loadingSummary, loadingHealth, loadingPredictions, loadingComparisons,
+    fetchWeeklySummary, fetchHealthScore, fetchPredictions, fetchBudgets, fetchComparisons,
   };
 }
 
@@ -164,9 +180,9 @@ const InsightsView: React.FC<InsightsViewProps> = ({
   onHealthScoreUpdate,
 }) => {
   const {
-    summary, predictions, nudges, budgets,
-    loadingSummary, loadingHealth, loadingPredictions,
-    fetchWeeklySummary, fetchHealthScore, fetchBudgets,
+    summary, predictions, nudges, budgets, comparisons,
+    loadingSummary, loadingHealth, loadingPredictions, loadingComparisons,
+    fetchWeeklySummary, fetchHealthScore, fetchBudgets, fetchComparisons, fetchPredictions,
   } = useInsightsData({ currencySymbol, languageCode, cachedHealthScore, onHealthScoreUpdate });
 
   const healthScore = cachedHealthScore;
@@ -283,63 +299,268 @@ const InsightsView: React.FC<InsightsViewProps> = ({
               </div>
             )}
 
-            {/* Business Health - Simple score */}
-            {healthScore && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-slate-800">Business Health</h3>
-                  <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    healthScore.score >= 70 ? 'bg-emerald-100 text-emerald-700' :
-                    healthScore.score >= 50 ? 'bg-amber-100 text-amber-700' :
-                    'bg-rose-100 text-rose-700'
-                  }`}>
-                    {healthScore.score}/100
+            {/* Business Health - Full breakdown */}
+            <details className="bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+              <summary className="p-4 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors list-none">
+                <div className="flex items-center gap-3">
+                  {healthScore ? (
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      healthScore.score >= 70 ? 'bg-emerald-100' :
+                      healthScore.score >= 50 ? 'bg-amber-100' : 'bg-rose-100'
+                    }`}>
+                      <span className={`text-xl font-black ${
+                        healthScore.score >= 70 ? 'text-emerald-600' :
+                        healthScore.score >= 50 ? 'text-amber-600' : 'text-rose-600'
+                      }`}>{healthScore.score}</span>
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
+                      <i className="fas fa-heart-pulse text-slate-400" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Financial Health</h3>
+                    <p className="text-xs text-slate-400">{healthScore ? healthScore.grade : 'Tap to view'}</p>
                   </div>
                 </div>
-                
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden mb-3">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      healthScore.score >= 70 ? 'bg-emerald-500' :
-                      healthScore.score >= 50 ? 'bg-amber-500' : 'bg-rose-500'
-                    }`}
-                    style={{ width: `${healthScore.score}%` }}
-                  />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); fetchHealthScore(); }}
+                    disabled={loadingHealth}
+                    className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center"
+                  >
+                    <i className={`fas fa-sync-alt text-xs text-slate-500 ${loadingHealth ? 'animate-spin' : ''}`} />
+                  </button>
+                  <i className="fas fa-chevron-down text-slate-400 text-sm group-open:rotate-180 transition-transform" />
                 </div>
-                
-                <p className="text-xs text-slate-500">{healthScore.grade}</p>
-                
-                <button 
-                  onClick={fetchHealthScore}
-                  disabled={loadingHealth}
-                  className="mt-2 text-xs text-indigo-600 font-medium hover:text-indigo-700 disabled:opacity-50"
-                >
-                  {loadingHealth ? 'Updating...' : 'Refresh'}
-                </button>
-              </div>
-            )}
-
-            {/* Upcoming Bills - Critical for cash flow planning */}
-            {predictions?.bill_reminders && predictions.bill_reminders.length > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                <h3 className="text-sm font-bold text-slate-800 mb-3">Upcoming Bills</h3>
-                <div className="space-y-2">
-                  {predictions.bill_reminders.slice(0, 4).map((bill, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                      <div>
-                        <p className="text-sm font-medium text-slate-700">{bill.name}</p>
-                        <p className={`text-xs ${bill.days_until_due <= 3 ? 'text-amber-600 font-medium' : 'text-slate-400'}`}>
-                          {bill.days_until_due === 0 ? '⚠️ Due today' : 
-                           bill.days_until_due === 1 ? '⚠️ Due tomorrow' : 
-                           `In ${bill.days_until_due} days`}
-                        </p>
+              </summary>
+              {healthScore && (
+                <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-4">
+                  {/* Score Breakdown */}
+                  <div className="space-y-3">
+                    {Object.entries(healthScore.breakdown).map(([key, item]) => (
+                      <div key={key}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-semibold text-slate-600">{item.label}</span>
+                          <span className="text-xs text-slate-400">{item.value}</span>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              (item.score / item.max) >= 0.7 ? 'bg-emerald-500' :
+                              (item.score / item.max) >= 0.5 ? 'bg-blue-500' :
+                              (item.score / item.max) >= 0.3 ? 'bg-amber-500' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${(item.score / item.max) * 100}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-end mt-0.5">
+                          <span className="text-[10px] text-slate-400">{item.score}/{item.max}</span>
+                        </div>
                       </div>
-                      <span className="text-sm font-bold text-slate-800">{currencySymbol}{bill.amount.toLocaleString()}</span>
+                    ))}
+                  </div>
+
+                  {/* AI Tips */}
+                  {healthScore.tips && (
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-5 h-5 bg-indigo-500 rounded-md flex items-center justify-center">
+                          <i className="fas fa-lightbulb text-white text-[8px]" />
+                        </div>
+                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wide">How to Improve</span>
+                      </div>
+                      <div className="text-xs leading-relaxed text-slate-600">
+                        {renderMarkdown(healthScore.tips)}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
+              )}
+            </details>
+
+            {/* Anonymous Comparisons */}
+            <details className="bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+              <summary className="p-4 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors list-none">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center">
+                    <i className="fas fa-users text-white text-sm" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">How You Compare</h3>
+                    <p className="text-xs text-slate-400">{comparisons ? comparisons.summary : 'Anonymous benchmarks'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); fetchComparisons(); }}
+                    disabled={loadingComparisons}
+                    className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center"
+                  >
+                    <i className={`fas fa-sync-alt text-xs text-slate-500 ${loadingComparisons ? 'animate-spin' : ''}`} />
+                  </button>
+                  <i className="fas fa-chevron-down text-slate-400 text-sm group-open:rotate-180 transition-transform" />
+                </div>
+              </summary>
+              <div className="px-4 pb-4 border-t border-slate-100 pt-3">
+                {loadingComparisons ? (
+                  <div className="flex items-center gap-2 py-4">
+                    <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-slate-400">Comparing your spending...</span>
+                  </div>
+                ) : comparisons && comparisons.comparisons.length > 0 ? (
+                  <div className="space-y-2">
+                    {comparisons.comparisons.map((item, i) => (
+                      <div key={i} className={`p-3 rounded-xl border ${item.is_better ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-slate-700">{item.category}</span>
+                          <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${item.is_better ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
+                            {item.is_better ? '✓ Better' : 'Room to improve'}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-500">You: <span className="font-bold text-slate-700">{item.your_value}</span></span>
+                          <span className="text-slate-500">Avg: <span className="font-bold text-slate-700">{item.benchmark}</span></span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1 italic">{item.insight}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 text-center py-4">Add more transactions to see comparisons</p>
+                )}
               </div>
-            )}
+            </details>
+
+            {/* Smart Predictions - Full details */}
+            <details className="bg-white rounded-2xl border border-slate-200 overflow-hidden group">
+              <summary className="p-4 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors list-none">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
+                    <i className="fas fa-crystal-ball text-white text-sm" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">Smart Predictions</h3>
+                    <p className="text-xs text-slate-400">{loadingPredictions ? 'Calculating...' : 'Forecasts & reminders'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); fetchPredictions(); }}
+                    disabled={loadingPredictions}
+                    className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center"
+                  >
+                    <i className={`fas fa-sync-alt text-xs text-slate-500 ${loadingPredictions ? 'animate-spin' : ''}`} />
+                  </button>
+                  <i className="fas fa-chevron-down text-slate-400 text-sm group-open:rotate-180 transition-transform" />
+                </div>
+              </summary>
+              <div className="px-4 pb-4 border-t border-slate-100 pt-3">
+                {loadingPredictions ? (
+                  <div className="flex items-center gap-2 py-4">
+                    <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-slate-400">Analyzing patterns...</span>
+                  </div>
+                ) : predictions ? (
+                  <div className="space-y-4">
+                    {/* Cash Flow Forecast */}
+                    <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl p-4 border border-cyan-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-cyan-500 rounded-lg flex items-center justify-center">
+                          <i className="fas fa-chart-line text-white text-[10px]" />
+                        </div>
+                        <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wide">Cash Flow Forecast</span>
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700 mb-3">{predictions.cash_flow_forecast.message}</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/60 rounded-lg p-2">
+                          <p className="text-[9px] text-slate-500 uppercase font-bold">Current</p>
+                          <p className={`text-lg font-black ${predictions.cash_flow_forecast.current_balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {currencySymbol}{Math.abs(predictions.cash_flow_forecast.current_balance).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="bg-white/60 rounded-lg p-2">
+                          <p className="text-[9px] text-slate-500 uppercase font-bold">End of Month</p>
+                          <p className={`text-lg font-black ${predictions.cash_flow_forecast.projected_end_of_month >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {currencySymbol}{Math.abs(predictions.cash_flow_forecast.projected_end_of_month).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-2 text-center">
+                        {predictions.cash_flow_forecast.days_remaining} days remaining this month
+                      </p>
+                    </div>
+
+                    {/* Bill Reminders */}
+                    {predictions.bill_reminders.length > 0 && (
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-6 h-6 bg-amber-500 rounded-lg flex items-center justify-center">
+                            <i className="fas fa-bell text-white text-[10px]" />
+                          </div>
+                          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Bill Reminders</span>
+                        </div>
+                        <div className="space-y-2">
+                          {predictions.bill_reminders.map((bill, i) => (
+                            <div 
+                              key={i} 
+                              className={`flex items-center justify-between p-2 rounded-lg ${bill.is_upcoming ? 'bg-amber-100 border border-amber-200' : 'bg-white/60'}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {bill.is_upcoming && <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
+                                <div>
+                                  <p className="text-xs font-semibold text-slate-700">{bill.name}</p>
+                                  <p className="text-[9px] text-slate-500">Due around the {bill.usual_day}{bill.usual_day === 1 ? 'st' : bill.usual_day === 2 ? 'nd' : bill.usual_day === 3 ? 'rd' : 'th'}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs font-bold text-slate-700">{currencySymbol}{bill.amount.toLocaleString()}</p>
+                                <p className={`text-[9px] font-semibold ${bill.is_upcoming ? 'text-amber-600' : 'text-slate-400'}`}>
+                                  {bill.days_until_due === 0 ? 'Today!' : bill.days_until_due === 1 ? 'Tomorrow' : `In ${bill.days_until_due} days`}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Debt Payoff Timeline */}
+                    <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-4 border border-violet-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-violet-500 rounded-lg flex items-center justify-center">
+                          <i className="fas fa-calendar-check text-white text-[10px]" />
+                        </div>
+                        <span className="text-[10px] font-bold text-violet-700 uppercase tracking-wide">Debt Payoff Timeline</span>
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700 mb-3">{predictions.debt_payoff.message}</p>
+                      {predictions.debt_payoff.total_debt > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                            <span className="text-[10px] text-slate-500 font-bold">Total Debt</span>
+                            <span className="text-sm font-black text-rose-600">{currencySymbol}{predictions.debt_payoff.total_debt.toLocaleString()}</span>
+                          </div>
+                          {predictions.debt_payoff.months_to_payoff && (
+                            <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                              <span className="text-[10px] text-slate-500 font-bold">Months to Freedom</span>
+                              <span className="text-sm font-black text-violet-600">{predictions.debt_payoff.months_to_payoff} months</span>
+                            </div>
+                          )}
+                          {predictions.debt_payoff.payoff_date && (
+                            <div className="flex items-center justify-between bg-white/60 rounded-lg p-2">
+                              <span className="text-[10px] text-slate-500 font-bold">Debt-Free By</span>
+                              <span className="text-sm font-black text-emerald-600">{predictions.debt_payoff.payoff_date}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 text-center py-4">Add more transactions to see predictions</p>
+                )}
+              </div>
+            </details>
 
             {/* Weekly Summary - Expandable for details */}
             <details className="bg-white rounded-2xl border border-slate-200 overflow-hidden group">
@@ -376,21 +597,6 @@ const InsightsView: React.FC<InsightsViewProps> = ({
               </div>
             </details>
 
-            {/* Debt Overview */}
-            {predictions?.debt_payoff && predictions.debt_payoff.total_debt > 0 && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                <h3 className="text-sm font-bold text-slate-800 mb-3">Money Owed to You</h3>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-slate-500">Total Outstanding</span>
-                  <span className="text-xl font-bold text-indigo-600">{currencySymbol}{predictions.debt_payoff.total_debt.toLocaleString()}</span>
-                </div>
-                {predictions.debt_payoff.payoff_date && (
-                  <p className="text-xs text-slate-500">
-                    Expected collection by <span className="font-semibold text-slate-700">{predictions.debt_payoff.payoff_date}</span>
-                  </p>
-                )}
-              </div>
-            )}
           </>
         )}
 
