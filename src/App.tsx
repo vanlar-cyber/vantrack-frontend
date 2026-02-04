@@ -5,6 +5,7 @@ import TransactionList from './components/TransactionList';
 import ChatInterface from './components/ChatInterface';
 import CreditManagement from './components/CreditManagement';
 import LedgerView from './components/LedgerView';
+import InsightsView from './components/InsightsView';
 import AuthScreen from './components/AuthScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { 
@@ -20,7 +21,7 @@ import {
   TransactionCreate 
 } from './services/api';
 
-type ViewMode = 'home' | 'assistant' | 'history' | 'portfolio' | 'ledger';
+type ViewMode = 'home' | 'assistant' | 'history' | 'portfolio' | 'ledger' | 'insights';
 
 const mapApiTransaction = (tx: TransactionResponse): Transaction => ({
   id: tx.id,
@@ -619,6 +620,16 @@ const MainApp: React.FC = () => {
             />
           </div>
         )}
+
+        {activeView === 'insights' && (
+          <div className="h-full overflow-y-auto p-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-xl font-black tracking-tight mb-6">AI Insights</h2>
+            <InsightsView 
+              currencySymbol={currency.symbol}
+              languageCode={language.code}
+            />
+          </div>
+        )}
       </main>
 
       <nav className="absolute bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center px-4 z-50">
@@ -643,9 +654,9 @@ const MainApp: React.FC = () => {
           <i className="fas fa-file-invoice-dollar text-lg"></i>
           <span className="text-[7px] font-black uppercase tracking-tighter">Ledger</span>
         </button>
-        <button onClick={() => setActiveView('history')} className={`flex flex-col items-center gap-1 ${activeView === 'history' ? 'text-indigo-600' : 'text-slate-300'}`}>
-          <i className="fas fa-layer-group text-lg"></i>
-          <span className="text-[7px] font-black uppercase tracking-tighter">Vault</span>
+        <button onClick={() => setActiveView('insights')} className={`flex flex-col items-center gap-1 ${activeView === 'insights' ? 'text-indigo-600' : 'text-slate-300'}`}>
+          <i className="fas fa-brain text-lg"></i>
+          <span className="text-[7px] font-black uppercase tracking-tighter">Insights</span>
         </button>
       </nav>
     </div>

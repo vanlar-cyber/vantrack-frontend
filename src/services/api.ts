@@ -361,4 +361,30 @@ export interface AIParseResponse {
   is_correction?: boolean;
 }
 
+// Insights API
+export interface WeeklySummaryResponse {
+  summary: string;
+}
+
+export interface QuestionRequest {
+  question: string;
+  currency_symbol?: string;
+  language_code?: string;
+}
+
+export interface QuestionResponse {
+  answer: string;
+}
+
+export const insightsApi = {
+  getWeeklySummary: (currencySymbol: string = '$', languageCode: string = 'en') =>
+    request<WeeklySummaryResponse>(`/insights/weekly-summary?currency_symbol=${encodeURIComponent(currencySymbol)}&language_code=${languageCode}`),
+  
+  askQuestion: (data: QuestionRequest) =>
+    request<QuestionResponse>('/insights/ask', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
 export { ApiError };
