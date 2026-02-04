@@ -52,15 +52,19 @@ const renderMarkdown = (text: string): React.ReactNode => {
 interface InsightsViewProps {
   currencySymbol: string;
   languageCode: string;
+  cachedHealthScore: HealthScoreResponse | null;
+  onHealthScoreUpdate: (score: HealthScoreResponse | null) => void;
 }
 
-const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCode }) => {
+const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCode, cachedHealthScore, onHealthScoreUpdate }) => {
   const [summary, setSummary] = useState<string>('');
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
-  const [healthScore, setHealthScore] = useState<HealthScoreResponse | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(false);
   const [healthExpanded, setHealthExpanded] = useState(true);
+  
+  // Use cached health score from parent
+  const healthScore = cachedHealthScore;
   const [askAiExpanded, setAskAiExpanded] = useState(false);
   const [question, setQuestion] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -116,7 +120,7 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
     setLoadingHealth(true);
     try {
       const response = await insightsApi.getHealthScore(currencySymbol, languageCode);
-      setHealthScore(response);
+      onHealthScoreUpdate(response);
     } catch (err) {
       console.error('Failed to fetch health score:', err);
     } finally {
@@ -126,8 +130,11 @@ const InsightsView: React.FC<InsightsViewProps> = ({ currencySymbol, languageCod
 
   useEffect(() => {
     fetchWeeklySummary();
-    fetchHealthScore();
-  }, [currencySymbol, languageCode]);
+    // Only fetch health score if not already cached
+    if (!cachedHealthScore) {
+      fetchHealthScore();
+    }
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });

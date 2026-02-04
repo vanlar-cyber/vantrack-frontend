@@ -14,11 +14,13 @@ import {
   messagesApi,
   draftsApi,
   aiApi,
+  insightsApi,
   TransactionResponse,
   ContactResponse,
   MessageResponse,
   DraftResponse,
-  TransactionCreate 
+  TransactionCreate,
+  HealthScoreResponse
 } from './services/api';
 
 type ViewMode = 'home' | 'assistant' | 'history' | 'portfolio' | 'ledger' | 'insights';
@@ -86,6 +88,9 @@ const MainApp: React.FC = () => {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Cached health score - persists across tab switches
+  const [cachedHealthScore, setCachedHealthScore] = useState<HealthScoreResponse | null>(null);
 
   // Map API message to local Message type
   const mapApiMessage = (m: MessageResponse): Message => ({
@@ -627,6 +632,8 @@ const MainApp: React.FC = () => {
             <InsightsView 
               currencySymbol={currency.symbol}
               languageCode={language.code}
+              cachedHealthScore={cachedHealthScore}
+              onHealthScoreUpdate={setCachedHealthScore}
             />
           </div>
         )}
