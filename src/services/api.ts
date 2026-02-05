@@ -510,6 +510,14 @@ export interface BudgetCreate {
   alert_at_percent?: number;
 }
 
+export interface BudgetTransactionSummary {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category?: string;
+}
+
 export interface BudgetResponse {
   id: string;
   name: string;
@@ -525,6 +533,7 @@ export interface BudgetResponse {
   status: string;
   period_start?: string;
   created_at: string;
+  transactions: BudgetTransactionSummary[];
 }
 
 export const insightsApi = {

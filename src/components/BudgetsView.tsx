@@ -260,7 +260,10 @@ const BudgetsView: React.FC<BudgetsViewProps> = ({ currencySymbol }) => {
               </div>
 
               {/* Status Badge */}
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] text-slate-400">
+                  {budget.transactions?.length || 0} transactions counted
+                </span>
                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
                   budget.status === 'over_budget' ? 'bg-rose-100 text-rose-600' :
                   budget.status === 'warning' ? 'bg-amber-100 text-amber-600' :
@@ -273,6 +276,33 @@ const BudgetsView: React.FC<BudgetsViewProps> = ({ currencySymbol }) => {
                    'On Track'}
                 </span>
               </div>
+
+              {/* Transactions List - Expandable */}
+              {budget.transactions && budget.transactions.length > 0 && (
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer text-[10px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                    <i className="fas fa-list text-[8px]"></i>
+                    View transactions
+                    <i className="fas fa-chevron-down text-[8px] group-open:rotate-180 transition-transform ml-auto"></i>
+                  </summary>
+                  <div className="mt-2 space-y-1 max-h-40 overflow-y-auto">
+                    {budget.transactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded-lg text-[10px]">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-700 truncate">{tx.description || 'No description'}</p>
+                          <p className="text-slate-400">
+                            {new Date(tx.date).toLocaleDateString()}
+                            {tx.category && ` • ${tx.category}`}
+                          </p>
+                        </div>
+                        <span className="font-bold text-slate-800 ml-2">
+                          {currencySymbol}{tx.amount.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           ))}
         </div>
