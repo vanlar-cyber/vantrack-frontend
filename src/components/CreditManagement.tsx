@@ -211,34 +211,57 @@ const CreditManagement: React.FC<CreditManagementProps> = ({
 
           {/* Send Reminder Button - Only show if they owe you */}
           {netPosition > 0 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  const message = `Hi ${contact.name}! 👋 Just a friendly reminder about the ${currencySymbol}${netPosition.toLocaleString()} you owe me. Let me know when you can settle up. Thanks! 🙏`;
-                  const whatsappUrl = contact.phone 
-                    ? `https://wa.me/${contact.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
-                    : `https://wa.me/?text=${encodeURIComponent(message)}`;
-                  window.open(whatsappUrl, '_blank');
-                }}
-                className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-100"
-              >
-                <i className="fab fa-whatsapp text-lg"></i>
-                <span className="text-[10px] font-black uppercase tracking-wider">Remind via WhatsApp</span>
-              </button>
-              <button
-                onClick={() => {
-                  const message = `Hi ${contact.name}! Just a friendly reminder about the ${currencySymbol}${netPosition.toLocaleString()} you owe me. Let me know when you can settle up. Thanks!`;
-                  if (contact.phone) {
-                    window.open(`sms:${contact.phone}?body=${encodeURIComponent(message)}`, '_blank');
-                  } else {
-                    navigator.clipboard.writeText(message);
-                    alert('Message copied to clipboard!');
-                  }
-                }}
-                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl flex items-center justify-center transition-all"
-              >
-                <i className="fas fa-comment-sms text-lg"></i>
-              </button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                <i className="fas fa-bell text-amber-500 text-xs"></i>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Send Payment Reminder</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => {
+                    const message = `Hi ${contact.name}! 👋 Just a friendly reminder about the ${currencySymbol}${netPosition.toLocaleString()} you owe me. Let me know when you can settle up. Thanks! 🙏`;
+                    const whatsappUrl = contact.phone 
+                      ? `https://wa.me/${contact.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+                      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+                    window.open(whatsappUrl, '_blank');
+                  }}
+                  className="py-3 px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-emerald-100"
+                >
+                  <i className="fab fa-whatsapp text-xl"></i>
+                  <span className="text-[8px] font-black uppercase">WhatsApp</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const message = `Hi ${contact.name}! Just a friendly reminder about the ${currencySymbol}${netPosition.toLocaleString()} you owe me. Let me know when you can settle up. Thanks!`;
+                    if (contact.phone) {
+                      window.open(`sms:${contact.phone}?body=${encodeURIComponent(message)}`, '_blank');
+                    } else {
+                      navigator.clipboard.writeText(message);
+                      alert('Message copied to clipboard! Add a phone number to send SMS directly.');
+                    }
+                  }}
+                  className="py-3 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-blue-100"
+                >
+                  <i className="fas fa-comment-sms text-xl"></i>
+                  <span className="text-[8px] font-black uppercase">SMS</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const subject = `Payment Reminder - ${currencySymbol}${netPosition.toLocaleString()}`;
+                    const body = `Hi ${contact.name},\n\nThis is a friendly reminder about the ${currencySymbol}${netPosition.toLocaleString()} you owe me.\n\nPlease let me know when you can settle up.\n\nThank you!`;
+                    if (contact.email) {
+                      window.open(`mailto:${contact.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+                    } else {
+                      navigator.clipboard.writeText(body);
+                      alert('Message copied to clipboard! Add an email to send directly.');
+                    }
+                  }}
+                  className="py-3 px-3 bg-slate-600 hover:bg-slate-700 text-white rounded-2xl flex flex-col items-center justify-center gap-1 transition-all shadow-lg shadow-slate-100"
+                >
+                  <i className="fas fa-envelope text-xl"></i>
+                  <span className="text-[8px] font-black uppercase">Email</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
