@@ -89,6 +89,19 @@ const MainApp: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Cash reconciliation state
+  const [showCashUpdate, setShowCashUpdate] = useState(false);
+  const [cashUpdateAmount, setCashUpdateAmount] = useState('');
+  const [dailyStartingCash, setDailyStartingCash] = useState<{ date: string; amount: number } | null>(() => {
+    const saved = localStorage.getItem('dailyStartingCash');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const today = new Date().toISOString().split('T')[0];
+      if (parsed.date === today) return parsed;
+    }
+    return null;
+  });
+  
   // Cached health score - persists across tab switches
   const [cachedHealthScore, setCachedHealthScore] = useState<HealthScoreResponse | null>(null);
 
@@ -275,6 +288,59 @@ const MainApp: React.FC = () => {
       t.status !== 'settled'
     );
   }, [transactions]);
+
+  // Handle cash reconciliation - create adjustment transaction if needed
+  const handleCashUpdate = useCallback(async (actualCash: number, isStartingCash: boolean = false) => {
+    const currentCash = balances.cash;
+    const difference = actualCash - currentCash;
+    
+    if (isStartingCash) {
+      // Save as today's starting cash
+      const today = new Date().toISOString().split('T')[0];
+      const startingData = { date: today, amount: actualCash };
+      localStorage.setItem('dailyStartingCash', JSON.stringify(startingData));
+      setDailyStartingCash(startingData);
+      
+      // If there's a difference, create adjustment
+      if (Math.abs(difference) > 0.01) {
+        try {
+          const txData: TransactionCreate = {
+            date: new Date().toISOString(),
+            amount: Math.abs(difference),
+            description: difference > 0 ? 'Cash adjustment (found extra)' : 'Cash adjustment (missing)',
+            category: 'adjustment',
+            type: difference > 0 ? 'income' : 'expense',
+            account: 'cash',
+          };
+          const newTx = await transactionsApi.create(txData);
+          setTransactions(prev => [mapApiTransaction(newTx), ...prev]);
+        } catch (error) {
+          console.error('Failed to create adjustment:', error);
+        }
+      }
+    } else {
+      // Just update total cash with adjustment
+      if (Math.abs(difference) > 0.01) {
+        try {
+          const txData: TransactionCreate = {
+            date: new Date().toISOString(),
+            amount: Math.abs(difference),
+            description: difference > 0 ? 'Cash adjustment (found extra)' : 'Cash adjustment (missing)',
+            category: 'adjustment',
+            type: difference > 0 ? 'income' : 'expense',
+            account: 'cash',
+          };
+          const newTx = await transactionsApi.create(txData);
+          setTransactions(prev => [mapApiTransaction(newTx), ...prev]);
+        } catch (error) {
+          console.error('Failed to create adjustment:', error);
+        }
+      }
+    }
+    
+    setShowCashUpdate(false);
+    setCashUpdateAmount('');
+  }, [balances.cash]);
 
   const addContact = useCallback(async (name: string, phone?: string, email?: string, note?: string) => {
     try {
@@ -591,11 +657,101 @@ const MainApp: React.FC = () => {
         </div>
       )}
 
+      {/* Cash Update Modal */}
+      {showCashUpdate && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-black text-slate-900">Update Cash Balance</h3>
+              <button 
+                onClick={() => { setShowCashUpdate(false); setCashUpdateAmount(''); }}
+                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"
+              >
+                <i className="fas fa-times text-slate-500"></i>
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <div className="text-center mb-4">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Balance (Calculated)</span>
+                <div className="text-2xl font-black text-slate-900">{currency.symbol}{balances.cash.toLocaleString()}</div>
+              </div>
+              
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">{currency.symbol}</span>
+                <input
+                  type="number"
+                  value={cashUpdateAmount}
+                  onChange={(e) => setCashUpdateAmount(e.target.value)}
+                  placeholder="Enter actual cash count"
+                  className="w-full pl-12 pr-4 py-4 text-xl font-bold border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:ring-0 outline-none"
+                  autoFocus
+                />
+              </div>
+              
+              {cashUpdateAmount && parseFloat(cashUpdateAmount) !== balances.cash && (
+                <div className={`mt-3 p-3 rounded-xl ${parseFloat(cashUpdateAmount) > balances.cash ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                  <div className="flex items-center gap-2">
+                    <i className={`fas ${parseFloat(cashUpdateAmount) > balances.cash ? 'fa-plus-circle text-emerald-500' : 'fa-minus-circle text-rose-500'}`}></i>
+                    <span className={`text-sm font-bold ${parseFloat(cashUpdateAmount) > balances.cash ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      {parseFloat(cashUpdateAmount) > balances.cash ? 'Found extra: ' : 'Missing: '}
+                      {currency.symbol}{Math.abs(parseFloat(cashUpdateAmount) - balances.cash).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">An adjustment transaction will be created</p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  if (cashUpdateAmount) {
+                    handleCashUpdate(parseFloat(cashUpdateAmount), true);
+                  }
+                }}
+                disabled={!cashUpdateAmount}
+                className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <i className="fas fa-sun mr-2"></i>
+                Set as Today's Starting Cash
+              </button>
+              <button
+                onClick={() => {
+                  if (cashUpdateAmount) {
+                    handleCashUpdate(parseFloat(cashUpdateAmount), false);
+                  }
+                }}
+                disabled={!cashUpdateAmount}
+                className="w-full py-4 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <i className="fas fa-sync-alt mr-2"></i>
+                Just Update Total
+              </button>
+            </div>
+
+            {dailyStartingCash && (
+              <div className="mt-4 p-3 bg-amber-50 rounded-xl">
+                <div className="flex items-center gap-2">
+                  <i className="fas fa-clock text-amber-500"></i>
+                  <span className="text-xs font-bold text-amber-700">
+                    Today's starting cash: {currency.symbol}{dailyStartingCash.amount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 overflow-hidden flex flex-col pb-20">
         {activeView === 'home' && (
           <div className="h-full overflow-y-auto custom-scrollbar p-5 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Cash Balance Hero */}
-            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-xl shadow-emerald-100">
+            {/* Cash Balance Hero - Tappable */}
+            <div 
+              onClick={() => setShowCashUpdate(true)}
+              className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-xl shadow-emerald-100 cursor-pointer hover:shadow-2xl transition-all active:scale-[0.99]"
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
@@ -609,9 +765,14 @@ const MainApp: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[8px] font-bold uppercase tracking-wider opacity-70 block">Today</span>
+                  <span className="text-[8px] font-bold uppercase tracking-wider opacity-70 block">
+                    {dailyStartingCash ? 'Since Start' : 'Today'}
+                  </span>
                   <div className="text-lg font-black">
-                    {todayCash.income - todayCash.expense >= 0 ? '+' : ''}{currency.symbol}{(todayCash.income - todayCash.expense).toLocaleString()}
+                    {dailyStartingCash 
+                      ? `${balances.cash - dailyStartingCash.amount >= 0 ? '+' : ''}${currency.symbol}${(balances.cash - dailyStartingCash.amount).toLocaleString()}`
+                      : `${todayCash.income - todayCash.expense >= 0 ? '+' : ''}${currency.symbol}${(todayCash.income - todayCash.expense).toLocaleString()}`
+                    }
                   </div>
                 </div>
               </div>
@@ -632,6 +793,13 @@ const MainApp: React.FC = () => {
                   </div>
                   <div className="text-base font-black">{currency.symbol}{todayCash.expense.toLocaleString()}</div>
                 </div>
+              </div>
+              
+              {/* Tap hint */}
+              <div className="mt-3 text-center">
+                <span className="text-[9px] font-bold opacity-60 uppercase tracking-wider">
+                  <i className="fas fa-hand-pointer mr-1"></i> Tap to update cash
+                </span>
               </div>
             </div>
 

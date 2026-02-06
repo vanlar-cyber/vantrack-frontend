@@ -241,6 +241,7 @@ export interface UserResponse {
 }
 
 export interface TransactionCreate {
+  date?: string;
   amount: number;
   description: string;
   category?: string;
