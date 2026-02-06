@@ -1121,8 +1121,9 @@ const MainApp: React.FC = () => {
                     <button
                       key={idx}
                       onClick={() => {
-                        setActiveView('assistant');
-                        setTimeout(() => handleSendMessage(nugget.prompt), 100);
+                        setActiveView('portfolio');
+                        // Store prompt to be picked up by InsightsView
+                        localStorage.setItem('askVanPrompt', nugget.prompt);
                       }}
                       className={`flex-shrink-0 bg-gradient-to-br ${nugget.color} text-white rounded-2xl px-4 py-3 shadow-lg hover:shadow-xl transition-all active:scale-95`}
                     >

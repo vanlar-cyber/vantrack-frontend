@@ -189,6 +189,20 @@ const InsightsView: React.FC<InsightsViewProps> = ({
   const { chatHistory, question, setQuestion, loading: askLoading, ask, chatEndRef, clearChat } = useAskAi(currencySymbol, languageCode);
   const [activeTab, setActiveTab] = useState<'overview' | 'budgets' | 'ai'>('overview');
 
+  // Check for prompt from Action Nuggets on Home page
+  useEffect(() => {
+    const savedPrompt = localStorage.getItem('askVanPrompt');
+    if (savedPrompt) {
+      localStorage.removeItem('askVanPrompt');
+      setActiveTab('ai');
+      setQuestion(savedPrompt);
+      // Auto-send after a brief delay
+      setTimeout(() => {
+        ask(savedPrompt);
+      }, 300);
+    }
+  }, []);
+
   const cashFlow = predictions?.cash_flow_forecast;
   const alerts = nudges?.nudges.filter(n => n.type === 'alert' || n.priority === 'high') || [];
   const celebrations = nudges?.nudges.filter(n => n.type === 'celebration') || [];
