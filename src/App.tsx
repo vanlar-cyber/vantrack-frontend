@@ -760,8 +760,8 @@ const MainApp: React.FC = () => {
 
       {/* Cash Update Modal */}
       {showCashUpdate && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 animate-in zoom-in-95 duration-300 max-h-[85vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-black text-slate-900">Update Cash</h3>
               <button 
