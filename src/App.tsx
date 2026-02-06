@@ -352,8 +352,13 @@ const MainApp: React.FC = () => {
   // Handle initial cash setup for new users
   const handleInitialCashSetup = useCallback(async (amount: number) => {
     try {
+      // Backdate to yesterday so it doesn't count as today's income
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(12, 0, 0, 0); // Set to noon yesterday
+      
       const txData: TransactionCreate = {
-        date: new Date().toISOString(),
+        date: yesterday.toISOString(),
         amount: amount,
         description: 'Initial cash balance',
         category: 'initial_balance',
