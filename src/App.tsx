@@ -102,6 +102,13 @@ const MainApp: React.FC = () => {
     return null;
   });
   
+  // Initial cash setup state (for new users)
+  const [hasInitialCash, setHasInitialCash] = useState<boolean>(() => {
+    return localStorage.getItem('hasInitialCash') === 'true';
+  });
+  const [showInitialCashSetup, setShowInitialCashSetup] = useState(false);
+  const [initialCashAmount, setInitialCashAmount] = useState('');
+  
   // Cached health score - persists across tab switches
   const [cachedHealthScore, setCachedHealthScore] = useState<HealthScoreResponse | null>(null);
 
@@ -341,6 +348,39 @@ const MainApp: React.FC = () => {
     setShowCashUpdate(false);
     setCashUpdateAmount('');
   }, [balances.cash]);
+
+  // Handle initial cash setup for new users
+  const handleInitialCashSetup = useCallback(async (amount: number) => {
+    try {
+      const txData: TransactionCreate = {
+        date: new Date().toISOString(),
+        amount: amount,
+        description: 'Initial cash balance',
+        category: 'initial_balance',
+        type: 'income',
+        account: 'cash',
+      };
+      const newTx = await transactionsApi.create(txData);
+      setTransactions(prev => [mapApiTransaction(newTx), ...prev]);
+      
+      // Mark as completed
+      localStorage.setItem('hasInitialCash', 'true');
+      setHasInitialCash(true);
+      setShowInitialCashSetup(false);
+      setInitialCashAmount('');
+    } catch (error) {
+      console.error('Failed to set initial cash:', error);
+    }
+  }, []);
+
+  // Show initial cash setup prompt for new users
+  useEffect(() => {
+    if (!isLoading && transactions.length === 0 && !hasInitialCash) {
+      // Small delay to let the UI settle
+      const timer = setTimeout(() => setShowInitialCashSetup(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, transactions.length, hasInitialCash]);
 
   const addContact = useCallback(async (name: string, phone?: string, email?: string, note?: string) => {
     try {
@@ -652,6 +692,60 @@ const MainApp: React.FC = () => {
                   </div>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Initial Cash Setup Modal (for new users) */}
+      {showInitialCashSetup && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 animate-in zoom-in-95 duration-300 shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-200">
+                <i className="fas fa-wallet text-white text-2xl"></i>
+              </div>
+              <h3 className="text-xl font-black text-slate-900 mb-2">Welcome! Set Your Cash</h3>
+              <p className="text-sm text-slate-500">How much cash do you have right now? This will be your starting balance.</p>
+            </div>
+
+            <div className="mb-6">
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-slate-400">{currency.symbol}</span>
+                <input
+                  type="number"
+                  value={initialCashAmount}
+                  onChange={(e) => setInitialCashAmount(e.target.value)}
+                  placeholder="0"
+                  className="w-full pl-14 pr-4 py-5 text-3xl font-black text-center border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:ring-0 outline-none"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  if (initialCashAmount && parseFloat(initialCashAmount) > 0) {
+                    handleInitialCashSetup(parseFloat(initialCashAmount));
+                  }
+                }}
+                disabled={!initialCashAmount || parseFloat(initialCashAmount) <= 0}
+                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold rounded-2xl hover:from-emerald-600 hover:to-teal-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-200"
+              >
+                <i className="fas fa-check mr-2"></i>
+                Set Initial Balance
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.setItem('hasInitialCash', 'true');
+                  setHasInitialCash(true);
+                  setShowInitialCashSetup(false);
+                }}
+                className="w-full py-3 text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors"
+              >
+                Skip for now (start from zero)
+              </button>
             </div>
           </div>
         </div>
