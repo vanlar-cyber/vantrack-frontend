@@ -976,6 +976,40 @@ const MainApp: React.FC = () => {
             </div>
 
             <BalanceCards balances={balances} currencySymbol={currency.symbol} />
+
+            {/* Action Nuggets - Quick questions for Van AI */}
+            <div>
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-robot text-white text-[10px]"></i>
+                </div>
+                <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ask Van</h2>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                {[
+                  { icon: 'fa-chart-pie', text: 'Where did my money go this week?', color: 'from-rose-500 to-pink-600' },
+                  { icon: 'fa-piggy-bank', text: 'How can I save more?', color: 'from-emerald-500 to-teal-600' },
+                  { icon: 'fa-receipt', text: 'What are my biggest expenses?', color: 'from-amber-500 to-orange-600' },
+                  { icon: 'fa-calendar-check', text: 'Show my spending this month', color: 'from-blue-500 to-indigo-600' },
+                  { icon: 'fa-hand-holding-usd', text: 'Who owes me money?', color: 'from-violet-500 to-purple-600' },
+                ].map((nugget, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setActiveView('assistant');
+                      setTimeout(() => {
+                        handleSendMessage(nugget.text);
+                      }, 100);
+                    }}
+                    className={`flex-shrink-0 bg-gradient-to-br ${nugget.color} text-white rounded-2xl px-4 py-3 flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95`}
+                  >
+                    <i className={`fas ${nugget.icon} text-sm opacity-90`}></i>
+                    <span className="text-xs font-bold whitespace-nowrap">{nugget.text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex justify-between items-center px-1">
               <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Feed</h2>
               <button onClick={() => setActiveView('history')} className="text-[10px] font-black text-indigo-600 uppercase">Vault</button>
