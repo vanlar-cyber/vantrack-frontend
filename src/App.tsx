@@ -1121,7 +1121,7 @@ const MainApp: React.FC = () => {
                     <button
                       key={idx}
                       onClick={() => {
-                        setActiveView('portfolio');
+                        setActiveView('insights');
                         // Store prompt to be picked up by InsightsView
                         localStorage.setItem('askVanPrompt', nugget.prompt);
                       }}
