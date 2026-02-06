@@ -271,7 +271,9 @@ const MainApp: React.FC = () => {
       .filter(tx => {
         const txDate = new Date(tx.date);
         txDate.setHours(0, 0, 0, 0);
-        return txDate.getTime() === today.getTime() && tx.account === 'cash';
+        // Exclude initial_balance and adjustment categories from today's count
+        const isInitialOrAdjustment = tx.category === 'initial_balance' || tx.category === 'adjustment';
+        return txDate.getTime() === today.getTime() && tx.account === 'cash' && !isInitialOrAdjustment;
       })
       .reduce((acc, tx) => {
         switch (tx.type) {
