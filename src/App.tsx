@@ -242,6 +242,33 @@ const MainApp: React.FC = () => {
     }, { cash: 0, bank: 0, credit: 0, loan: 0 } as BalanceSummary);
   }, [transactions]);
 
+  // Today's cash flow calculation
+  const todayCash = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return transactions
+      .filter(tx => {
+        const txDate = new Date(tx.date);
+        txDate.setHours(0, 0, 0, 0);
+        return txDate.getTime() === today.getTime() && tx.account === 'cash';
+      })
+      .reduce((acc, tx) => {
+        switch (tx.type) {
+          case 'income':
+          case 'payment_received':
+          case 'loan_payable':
+            return { ...acc, income: acc.income + tx.amount };
+          case 'expense':
+          case 'payment_made':
+          case 'loan_receivable':
+            return { ...acc, expense: acc.expense + tx.amount };
+          default:
+            return acc;
+        }
+      }, { income: 0, expense: 0 });
+  }, [transactions]);
+
   const openDebts = useMemo(() => {
     return transactions.filter(t => 
       ['credit_receivable', 'credit_payable', 'loan_receivable', 'loan_payable'].includes(t.type) &&
@@ -567,6 +594,47 @@ const MainApp: React.FC = () => {
       <main className="flex-1 overflow-hidden flex flex-col pb-20">
         {activeView === 'home' && (
           <div className="h-full overflow-y-auto custom-scrollbar p-5 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Cash Balance Hero */}
+            <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl p-5 text-white shadow-xl shadow-emerald-100">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                    <i className="fas fa-wallet text-lg"></i>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold uppercase tracking-widest opacity-80">Cash on Hand</span>
+                    <div className="text-2xl font-black leading-none">
+                      {currency.symbol}{balances.cash.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[8px] font-bold uppercase tracking-wider opacity-70 block">Today</span>
+                  <div className="text-lg font-black">
+                    {todayCash.income - todayCash.expense >= 0 ? '+' : ''}{currency.symbol}{(todayCash.income - todayCash.expense).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Today's breakdown */}
+              <div className="flex gap-3">
+                <div className="flex-1 bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <i className="fas fa-arrow-down text-[10px] opacity-80"></i>
+                    <span className="text-[8px] font-bold uppercase tracking-wider opacity-80">In Today</span>
+                  </div>
+                  <div className="text-base font-black">{currency.symbol}{todayCash.income.toLocaleString()}</div>
+                </div>
+                <div className="flex-1 bg-white/10 rounded-xl p-3 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <i className="fas fa-arrow-up text-[10px] opacity-80"></i>
+                    <span className="text-[8px] font-bold uppercase tracking-wider opacity-80">Out Today</span>
+                  </div>
+                  <div className="text-base font-black">{currency.symbol}{todayCash.expense.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+
             <BalanceCards balances={balances} currencySymbol={currency.symbol} />
             <div className="flex justify-between items-center px-1">
               <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Feed</h2>
