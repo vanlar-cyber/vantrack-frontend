@@ -243,41 +243,6 @@ const InsightsView: React.FC<InsightsViewProps> = ({
       <div className="p-4 space-y-4">
         {activeTab === 'overview' && (
           <>
-            {/* Cash Position Hero - Most important for MSMEs */}
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Cash Position</span>
-                {loadingPredictions && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              </div>
-              
-              {cashFlow ? (
-                <>
-                  <div className="text-3xl font-black mb-4">
-                    {currencySymbol}{cashFlow.current_balance.toLocaleString()}
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white/10 rounded-xl p-3">
-                      <div className="text-[10px] text-slate-400 uppercase font-medium mb-0.5">End of Month</div>
-                      <div className={`text-lg font-bold ${cashFlow.projected_end_of_month >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {currencySymbol}{Math.abs(cashFlow.projected_end_of_month).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="bg-white/10 rounded-xl p-3">
-                      <div className="text-[10px] text-slate-400 uppercase font-medium mb-0.5">Days Left</div>
-                      <div className="text-lg font-bold">{cashFlow.days_remaining}</div>
-                    </div>
-                  </div>
-                  
-                  {cashFlow.message && (
-                    <p className="text-xs text-slate-300 mt-3 leading-relaxed">{cashFlow.message}</p>
-                  )}
-                </>
-              ) : (
-                <div className="text-2xl font-bold text-slate-500">Loading...</div>
-              )}
-            </div>
-
             {/* Alerts - Action items that need attention */}
             {alerts.length > 0 && (
               <div className="space-y-2">
