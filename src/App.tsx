@@ -660,9 +660,9 @@ const MainApp: React.FC = () => {
       {/* Cash Update Modal */}
       {showCashUpdate && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300">
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black text-slate-900">Update Cash Balance</h3>
+              <h3 className="text-lg font-black text-slate-900">Update Cash</h3>
               <button 
                 onClick={() => { setShowCashUpdate(false); setCashUpdateAmount(''); }}
                 className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"
@@ -671,51 +671,96 @@ const MainApp: React.FC = () => {
               </button>
             </div>
 
-            <div className="mb-6">
-              <div className="text-center mb-4">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Balance (Calculated)</span>
-                <div className="text-2xl font-black text-slate-900">{currency.symbol}{balances.cash.toLocaleString()}</div>
+            {/* Current Status */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-emerald-50 rounded-2xl p-4 text-center">
+                <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider block mb-1">Total Cash</span>
+                <div className="text-xl font-black text-emerald-700">{currency.symbol}{balances.cash.toLocaleString()}</div>
               </div>
-              
+              <div className="bg-blue-50 rounded-2xl p-4 text-center">
+                <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider block mb-1">
+                  {dailyStartingCash ? "Today's Change" : "Today's Flow"}
+                </span>
+                <div className="text-xl font-black text-blue-700">
+                  {dailyStartingCash 
+                    ? `${balances.cash - dailyStartingCash.amount >= 0 ? '+' : ''}${currency.symbol}${(balances.cash - dailyStartingCash.amount).toLocaleString()}`
+                    : `${todayCash.income - todayCash.expense >= 0 ? '+' : ''}${currency.symbol}${(todayCash.income - todayCash.expense).toLocaleString()}`
+                  }
+                </div>
+              </div>
+            </div>
+
+            {/* Starting Cash Info */}
+            {dailyStartingCash && (
+              <div className="mb-4 p-3 bg-amber-50 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <i className="fas fa-sun text-amber-500"></i>
+                  <span className="text-xs font-bold text-amber-700">
+                    Started today with {currency.symbol}{dailyStartingCash.amount.toLocaleString()}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem('dailyStartingCash');
+                    setDailyStartingCash(null);
+                  }}
+                  className="text-[10px] text-amber-600 hover:text-amber-800 font-bold"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="mb-6">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                How much cash do you have now?
+              </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-400">{currency.symbol}</span>
                 <input
                   type="number"
                   value={cashUpdateAmount}
                   onChange={(e) => setCashUpdateAmount(e.target.value)}
-                  placeholder="Enter actual cash count"
+                  placeholder="Count your cash..."
                   className="w-full pl-12 pr-4 py-4 text-xl font-bold border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:ring-0 outline-none"
                   autoFocus
                 />
               </div>
               
+              {/* Difference indicator */}
               {cashUpdateAmount && parseFloat(cashUpdateAmount) !== balances.cash && (
                 <div className={`mt-3 p-3 rounded-xl ${parseFloat(cashUpdateAmount) > balances.cash ? 'bg-emerald-50' : 'bg-rose-50'}`}>
                   <div className="flex items-center gap-2">
                     <i className={`fas ${parseFloat(cashUpdateAmount) > balances.cash ? 'fa-plus-circle text-emerald-500' : 'fa-minus-circle text-rose-500'}`}></i>
                     <span className={`text-sm font-bold ${parseFloat(cashUpdateAmount) > balances.cash ? 'text-emerald-700' : 'text-rose-700'}`}>
-                      {parseFloat(cashUpdateAmount) > balances.cash ? 'Found extra: ' : 'Missing: '}
+                      {parseFloat(cashUpdateAmount) > balances.cash ? 'Extra: ' : 'Missing: '}
                       {currency.symbol}{Math.abs(parseFloat(cashUpdateAmount) - balances.cash).toLocaleString()}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-500 mt-1">An adjustment transaction will be created</p>
                 </div>
               )}
             </div>
 
+            {/* Action Buttons */}
             <div className="space-y-3">
-              <button
-                onClick={() => {
-                  if (cashUpdateAmount) {
-                    handleCashUpdate(parseFloat(cashUpdateAmount), true);
-                  }
-                }}
-                disabled={!cashUpdateAmount}
-                className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <i className="fas fa-sun mr-2"></i>
-                Set as Today's Starting Cash
-              </button>
+              {/* Morning: Set Starting Cash */}
+              {!dailyStartingCash && (
+                <button
+                  onClick={() => {
+                    if (cashUpdateAmount) {
+                      handleCashUpdate(parseFloat(cashUpdateAmount), true);
+                    }
+                  }}
+                  disabled={!cashUpdateAmount}
+                  className="w-full py-4 bg-amber-500 text-white font-bold rounded-2xl hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <i className="fas fa-sun mr-2"></i>
+                  Set as Starting Cash (Morning)
+                </button>
+              )}
+
+              {/* Anytime: Update Current Cash */}
               <button
                 onClick={() => {
                   if (cashUpdateAmount) {
@@ -723,23 +768,28 @@ const MainApp: React.FC = () => {
                   }
                 }}
                 disabled={!cashUpdateAmount}
-                className="w-full py-4 bg-slate-100 text-slate-700 font-bold rounded-2xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full py-4 bg-emerald-500 text-white font-bold rounded-2xl hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <i className="fas fa-sync-alt mr-2"></i>
-                Just Update Total
+                <i className="fas fa-check mr-2"></i>
+                Update Cash Now
               </button>
-            </div>
 
-            {dailyStartingCash && (
-              <div className="mt-4 p-3 bg-amber-50 rounded-xl">
-                <div className="flex items-center gap-2">
-                  <i className="fas fa-clock text-amber-500"></i>
-                  <span className="text-xs font-bold text-amber-700">
-                    Today's starting cash: {currency.symbol}{dailyStartingCash.amount.toLocaleString()}
-                  </span>
+              {/* If already has starting cash, show today's profit/loss preview */}
+              {dailyStartingCash && cashUpdateAmount && (
+                <div className="p-4 bg-slate-50 rounded-2xl">
+                  <div className="text-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Today's Result</span>
+                    <div className={`text-2xl font-black ${parseFloat(cashUpdateAmount) - dailyStartingCash.amount >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {parseFloat(cashUpdateAmount) - dailyStartingCash.amount >= 0 ? '+' : ''}
+                      {currency.symbol}{(parseFloat(cashUpdateAmount) - dailyStartingCash.amount).toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      Started: {currency.symbol}{dailyStartingCash.amount.toLocaleString()} → Now: {currency.symbol}{parseFloat(cashUpdateAmount).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
