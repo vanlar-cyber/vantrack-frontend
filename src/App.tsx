@@ -299,6 +299,136 @@ const MainApp: React.FC = () => {
     );
   }, [transactions]);
 
+  // Dynamic Action Nuggets - analyze user data for insights
+  const actionNuggets = useMemo(() => {
+    const nuggets: { icon: string; label: string; value: string; color: string; prompt: string }[] = [];
+    
+    // 1. This week's spending vs last week
+    const now = new Date();
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setDate(now.getDate() - now.getDay());
+    startOfThisWeek.setHours(0, 0, 0, 0);
+    
+    const startOfLastWeek = new Date(startOfThisWeek);
+    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+    
+    const thisWeekExpenses = transactions
+      .filter(t => t.type === 'expense' && new Date(t.date) >= startOfThisWeek)
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const lastWeekExpenses = transactions
+      .filter(t => {
+        const d = new Date(t.date);
+        return t.type === 'expense' && d >= startOfLastWeek && d < startOfThisWeek;
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    if (lastWeekExpenses > 0) {
+      const diff = thisWeekExpenses - lastWeekExpenses;
+      const pct = Math.round((diff / lastWeekExpenses) * 100);
+      if (Math.abs(pct) >= 10) {
+        nuggets.push({
+          icon: pct > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down',
+          label: pct > 0 ? 'Spending Up' : 'Spending Down',
+          value: `${pct > 0 ? '+' : ''}${pct}%`,
+          color: pct > 0 ? 'from-rose-500 to-pink-600' : 'from-emerald-500 to-teal-600',
+          prompt: `My spending is ${pct > 0 ? 'up' : 'down'} ${Math.abs(pct)}% this week compared to last week. What's causing this and how can I ${pct > 0 ? 'reduce it' : 'keep it up'}?`
+        });
+      }
+    }
+    
+    // 2. Top spending category this month
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const categorySpending: Record<string, number> = {};
+    transactions
+      .filter(t => t.type === 'expense' && new Date(t.date) >= startOfMonth && t.category)
+      .forEach(t => {
+        categorySpending[t.category!] = (categorySpending[t.category!] || 0) + t.amount;
+      });
+    
+    const topCategory = Object.entries(categorySpending).sort((a, b) => b[1] - a[1])[0];
+    if (topCategory && topCategory[1] > 0) {
+      nuggets.push({
+        icon: 'fa-fire',
+        label: topCategory[0].charAt(0).toUpperCase() + topCategory[0].slice(1),
+        value: `${currency.symbol}${topCategory[1].toLocaleString()}`,
+        color: 'from-amber-500 to-orange-600',
+        prompt: `I spent ${currency.symbol}${topCategory[1].toLocaleString()} on ${topCategory[0]} this month. Is this normal? How can I optimize this spending?`
+      });
+    }
+    
+    // 3. Money owed to you (receivables)
+    const receivables = transactions
+      .filter(t => ['credit_receivable', 'loan_receivable'].includes(t.type) && t.status !== 'settled')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    if (receivables > 0) {
+      const debtorCount = new Set(transactions
+        .filter(t => ['credit_receivable', 'loan_receivable'].includes(t.type) && t.status !== 'settled')
+        .map(t => t.contact)
+      ).size;
+      
+      nuggets.push({
+        icon: 'fa-hand-holding-dollar',
+        label: `${debtorCount} Owe You`,
+        value: `${currency.symbol}${receivables.toLocaleString()}`,
+        color: 'from-violet-500 to-purple-600',
+        prompt: `I have ${currency.symbol}${receivables.toLocaleString()} owed to me by ${debtorCount} people. Who are they and how should I follow up?`
+      });
+    }
+    
+    // 4. Money you owe (payables)
+    const payables = transactions
+      .filter(t => ['credit_payable', 'loan_payable'].includes(t.type) && t.status !== 'settled')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    if (payables > 0) {
+      nuggets.push({
+        icon: 'fa-credit-card',
+        label: 'You Owe',
+        value: `${currency.symbol}${payables.toLocaleString()}`,
+        color: 'from-rose-500 to-red-600',
+        prompt: `I owe ${currency.symbol}${payables.toLocaleString()}. What's the best strategy to pay this off?`
+      });
+    }
+    
+    // 5. Unusual large expense (anomaly detection)
+    const recentExpenses = transactions
+      .filter(t => t.type === 'expense' && new Date(t.date) >= startOfMonth);
+    
+    if (recentExpenses.length >= 3) {
+      const avgExpense = recentExpenses.reduce((sum, t) => sum + t.amount, 0) / recentExpenses.length;
+      const largeExpense = recentExpenses.find(t => t.amount > avgExpense * 2.5);
+      
+      if (largeExpense) {
+        nuggets.push({
+          icon: 'fa-exclamation-triangle',
+          label: 'Large Expense',
+          value: `${currency.symbol}${largeExpense.amount.toLocaleString()}`,
+          color: 'from-amber-500 to-red-500',
+          prompt: `I had a large expense of ${currency.symbol}${largeExpense.amount.toLocaleString()} for "${largeExpense.description}". Is this concerning? How does it affect my budget?`
+        });
+      }
+    }
+    
+    // 6. Income this month
+    const monthlyIncome = transactions
+      .filter(t => t.type === 'income' && new Date(t.date) >= startOfMonth && t.category !== 'initial_balance')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    if (monthlyIncome > 0) {
+      nuggets.push({
+        icon: 'fa-coins',
+        label: 'Income',
+        value: `${currency.symbol}${monthlyIncome.toLocaleString()}`,
+        color: 'from-emerald-500 to-green-600',
+        prompt: `I earned ${currency.symbol}${monthlyIncome.toLocaleString()} this month. How am I doing? Any tips to increase my income?`
+      });
+    }
+    
+    return nuggets.slice(0, 5); // Max 5 nuggets
+  }, [transactions, currency.symbol]);
+
   // Handle TOTAL cash update - adjusts overall balance
   const handleTotalCashUpdate = useCallback(async (actualCash: number) => {
     const currentCash = balances.cash;
@@ -977,44 +1107,37 @@ const MainApp: React.FC = () => {
 
             <BalanceCards balances={balances} currencySymbol={currency.symbol} />
 
-            {/* Action Nuggets - Quick access to insights & AI */}
-            <div>
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-lightbulb text-white text-[10px]"></i>
+            {/* Dynamic Action Nuggets - Insights from user data */}
+            {actionNuggets.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-lightbulb text-white text-[10px]"></i>
+                  </div>
+                  <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Your Insights</h2>
                 </div>
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quick Actions</h2>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-                {[
-                  { icon: 'fa-heart-pulse', label: 'Health Score', color: 'from-emerald-500 to-teal-600', action: 'insights' },
-                  { icon: 'fa-chart-line', label: 'Cash Forecast', color: 'from-cyan-500 to-blue-600', action: 'insights' },
-                  { icon: 'fa-bullseye', label: 'Budgets', color: 'from-amber-500 to-orange-600', action: 'budgets' },
-                  { icon: 'fa-robot', label: 'Ask Van', color: 'from-indigo-500 to-purple-600', action: 'ai' },
-                  { icon: 'fa-hand-holding-usd', label: 'Who Owes Me?', color: 'from-violet-500 to-pink-600', action: 'ai', prompt: 'Who owes me money?' },
-                ].map((nugget, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      if (nugget.action === 'insights') {
-                        setActiveView('portfolio');
-                      } else if (nugget.action === 'budgets') {
-                        setActiveView('portfolio');
-                      } else if (nugget.action === 'ai') {
+                <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+                  {actionNuggets.map((nugget, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
                         setActiveView('assistant');
-                        if (nugget.prompt) {
-                          setTimeout(() => handleSendMessage(nugget.prompt!), 100);
-                        }
-                      }
-                    }}
-                    className={`flex-shrink-0 bg-gradient-to-br ${nugget.color} text-white rounded-2xl px-4 py-3 flex items-center gap-2 shadow-lg hover:shadow-xl transition-all active:scale-95`}
-                  >
-                    <i className={`fas ${nugget.icon} text-sm opacity-90`}></i>
-                    <span className="text-xs font-bold whitespace-nowrap">{nugget.label}</span>
-                  </button>
-                ))}
+                        setTimeout(() => handleSendMessage(nugget.prompt), 100);
+                      }}
+                      className={`flex-shrink-0 bg-gradient-to-br ${nugget.color} text-white rounded-2xl px-4 py-3 shadow-lg hover:shadow-xl transition-all active:scale-95`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <i className={`fas ${nugget.icon} text-lg opacity-90`}></i>
+                        <div className="text-left">
+                          <div className="text-[10px] font-medium opacity-80">{nugget.label}</div>
+                          <div className="text-sm font-black">{nugget.value}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-between items-center px-1">
               <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recent Feed</h2>
